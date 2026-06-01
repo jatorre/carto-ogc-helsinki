@@ -55,7 +55,7 @@ CRS the dataset's metadata specifies (Finnish data → EPSG:3067).
 - **Sovereignty:** "European / sovereign infrastructure" — not "no data leaves the country".
 - Always: this is an **initial spatial screening, not a permit decision.** Every number keeps its source + query.
 
-## Reference / web demo
-`sdi_report.py` is a **reference implementation** that runs a fixed version of this flow
-and renders the HTML — it's what precomputes the static web demo (`webapp/`). In a **live**
-session, do the discovery yourself so it's real.
+## Web demo
+`webapp/` is a **precomputed snapshot** of one run of this flow (a CARTO-branded site that
+replays the Espoo scenario from committed `data/*.json`). In a live session, do the
+discovery yourself — that's the point.

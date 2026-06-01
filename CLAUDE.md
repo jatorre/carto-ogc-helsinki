@@ -22,20 +22,21 @@ Published via **GitHub Pages** at `https://jatorre.github.io/carto-ogc-helsinki/
   the PNGs.
 
 ## The demo (`webapp/`)
-- Static site: `index.html` (federation index of 133 datasets) + `app.html` (scripted Q&A
-  with a MapLibre map). Both read precomputed `webapp/data/{catalog,scenario}.json`.
-- **Regenerate the data** from the live catalog: `python3 webapp/build_data.py` — it imports
-  `.claude/skills/sdi/sdi_report.py` and writes the two JSON files. Needs the `duckdb` CLI
-  (the skill shells out to `duckdb -unsigned`, because the pip module crashes loading the
-  Iceberg extension).
+- Static site, **precomputed snapshot** of one skill run: `index.html` (federation index of
+  133 datasets) + `app.html` (scripted Q&A with a MapLibre map). Both read committed
+  `webapp/data/{catalog,scenario}.json` — no backend, no build step.
 - The catalog lives on a **public, anonymous** UpCloud bucket
   (`https://8et4c.upcloudobjects.com/carto-ogc-connect-helsinki/catalog`, `AUTHORIZATION_TYPE 'none'`),
-  so the demo needs no credentials.
+  so the demo needs no credentials. To rebuild/republish the catalog itself, use
+  `demo/build_iceberg_catalog.py` (testbed venv + `mc`; see catalog-architecture memory).
 
-## The `/sdi` skill (`.claude/skills/sdi/`)
-Attaches the Iceberg/STAC catalog, discovers datasets, queries them with the DuckDB CLI, and
-renders an HTML site-assessment report to `demo/output/` (gitignored). This is the engine the
-webapp reuses.
+## The `sdi` skill (`.claude/skills/sdi/`)
+The live demo. `SKILL.md` is a **generic progressive-discovery loop** (registry → catalog →
+dataset → query) and `catalogs.md` is the **catalog registry**. The agent attaches the
+Iceberg/STAC catalogs, discovers datasets, reads each dataset's own metadata (incl. a
+runnable `example_query`), queries with the DuckDB CLI, and builds an HTML site-assessment
+artifact — all live. Specifics (endpoints, schemas, query recipes) live in the catalog
+metadata, not the skill, so adding a publisher is just a new endpoint + a `catalogs.md` line.
 
 ## Claim framing — IMPORTANT, do not regress
 The deck and demo deliberately avoid overclaiming. When editing any user-facing copy:

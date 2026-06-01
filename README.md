@@ -43,9 +43,8 @@ python3 -m http.server 8765
 |---|---|
 | [`index.html`](index.html) | The 10-slide deck (reveal.js, vendored — offline-ready). Each slide is a 16:9 frame of the source Google Slides; the full speaker script is in the presenter notes. |
 | [`slides/img/`](slides/img/) | The committed 16:9 slide images. |
-| [`webapp/`](webapp/) | The live demo site: `index.html` (federation index of 133 datasets) + `app.html` (the scripted Q&A with map). Reads `webapp/data/*.json`. |
-| [`webapp/build_data.py`](webapp/build_data.py) | Regenerates `webapp/data/{catalog,scenario}.json` from the **live** UpCloud catalog (imports the `/sdi` skill engine). |
-| [`.claude/skills/sdi/`](.claude/skills/sdi/) | The `/sdi` Claude skill — attaches the Iceberg/STAC catalog, discovers datasets, queries them with the DuckDB CLI, and renders an HTML site-assessment report. |
+| [`webapp/`](webapp/) | Precomputed demo site: `index.html` (federation index of 133 datasets) + `app.html` (the scripted Q&A with map). Serves committed `webapp/data/*.json` — no backend. |
+| [`.claude/skills/sdi/`](.claude/skills/sdi/) | The `sdi` Claude skill — `SKILL.md` (generic progressive-discovery loop) + `catalogs.md` (the catalog registry). The agent attaches the catalogs, reads each dataset's metadata (incl. a runnable `example_query`), queries with the DuckDB CLI, and builds an HTML artifact — live. |
 | [`demo/build_iceberg_catalog.py`](demo/build_iceberg_catalog.py) | Builds the static GeoIceberg/STAC catalog published to UpCloud. |
 | [`demo/ingest_official.py`](demo/ingest_official.py) | Pulls official NLS/SYKE/Copernicus source data (needs a local API key, not committed). |
 

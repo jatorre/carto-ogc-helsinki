@@ -38,9 +38,11 @@ sovereign SDI and reason about it*:
 
 ```
 .claude/skills/sdi/
-├── SKILL.md          # when to trigger · the catalog endpoint · the live flow
-└── sdi_report.py     # the engine: attach → discover → query → render
+├── SKILL.md      # generic progressive-discovery loop: registry → catalog → dataset → query
+└── catalogs.md   # the registry: which SDIs exist + what each holds (pick a catalog)
 ```
+The skill carries **no query code** — each dataset's own metadata carries a runnable
+`example_query`, so the agent learns how to query it by reading the catalog (self-describing).
 
 The catalog it points at is a **published artifact** living on European object
 storage (UpCloud, in Finland). The agent *uses* it; it never builds or copies it.
