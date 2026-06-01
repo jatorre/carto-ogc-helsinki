@@ -5,9 +5,9 @@
 > **attach it and read its own STAC index** (`catalog.datasets`); each dataset carries its
 > own metadata, including a runnable `example_query`. That's the progressive discovery:
 > registry → catalog → dataset → query. Adding a source = a new endpoint + an entry here;
-> the skill doesn't change. Today there are **five** (the Portolan Helsinki demo) spanning
-> EU, national, regional and municipal tiers — and one is **non-geospatial**, to show the
-> SDI federates open data, not just maps. There will be many more.
+> the skill doesn't change. Today there are **six** (the Portolan Helsinki demo) spanning
+> EU, national and regional tiers — and one is **non-geospatial**, to show the SDI federates
+> open data, not just maps. There will be many more.
 
 ## How catalogs work (applies to all of them)
 Each is an **Apache Iceberg** catalog on object storage (UpCloud, European / sovereign
@@ -66,7 +66,14 @@ for siting a large consumer (a hyperscale data centre is ~100–300 MW; Finland 
 `example_query` is a non-spatial aggregate (avg / peak / min MW).
 - **Attach as** `fingrid` · **endpoint** `https://8et4c.upcloudobjects.com/carto-ogc-connect-helsinki/catalog/fingrid`
 
-> A **combined** catalog also exists at `…/catalog` (all publishers, 137 datasets,
+### 📊 Statistics Finland (Tilastokeskus)
+Official statistics. **2 datasets, materialized**: `paavo_vaesto` (Paavo postal-area
+demographics 2025 — population, income, employment, age) and `vaestoruutu_1km` (1 km
+population grid 2025 — inhabitants + age groups per cell). Quantifies the **residential
+context** at the site (postal-area population/income; people in the 1 km cell).
+- **Attach as** `statfi` · **endpoint** `https://8et4c.upcloudobjects.com/carto-ogc-connect-helsinki/catalog/statistics-finland`
+
+> A **combined** catalog also exists at `…/catalog` (all publishers, 139 datasets,
 > vectors as `sdi.v2.*`) — the precomputed web demo uses it. For the **live agent demo,
 > prefer the three publisher endpoints above** — attaching them separately is the point:
 > a real federation of independent, sovereign sources.

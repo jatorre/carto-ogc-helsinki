@@ -242,6 +242,13 @@ def _example_query(mat):
     if kind == "tabular":  # NON-spatial dataset (e.g. grid time-series): aggregate, no geometry
         return ("SELECT round(avg(consumption_mw)) AS avg_load_mw, round(max(consumption_mw)) AS peak_load_mw, "
                 f"round(min(consumption_mw)) AS min_load_mw FROM read_parquet('{val}');")
+    if kind == "demographics":  # postal-area statistics at the site (point-in-polygon)
+        return ("SELECT nimi AS postal_area, he_vakiy AS population, hr_mtu AS median_income_eur, "
+                f"tp_tyopy AS jobs, pt_tyott AS unemployed FROM read_parquet('{val}') "
+                "WHERE ST_Contains(geom, ST_Point(:lon,:lat)) LIMIT 1;")
+    if kind == "popgrid":  # 1 km population-grid cell at the site
+        return ("SELECT vaesto AS population_1km_cell, ika_0_14, ika_15_64, ika_65_ "
+                f"FROM read_parquet('{val}') WHERE ST_Contains(geom, ST_Point(:lon,:lat)) LIMIT 1;")
     if "ndvi" in val:  # raster (raquet) — NDVI = (NIR-Red)/(NIR+Red)
         return _GRID + ("SELECT avg((b2-b1)/(b2+b1)) AS ndvi FROM ("
                         "SELECT ST_RasterValue(r.block,r.band_2,ST_Point(g.lon,g.lat),r.metadata) b2,"
@@ -340,6 +347,17 @@ def collect_rows():
         "timeseries", None, None, ("tabular", f"{EXTRA}/fingrid_consumption.parquet", "parquet"),
         "recent national load: avg / peak / min MW (a hyperscale data centre is ~100-300 MW for scale)",
         "electricity; grid; capacity; power; non-spatial; can-i-build-a-data-center")
+    # Statistics Finland — official statistics (Paavo postal-area demographics + 1 km population grid)
+    add("paavo_vaesto", "statfi-paavo", "Postal-area demographics (Paavo 2025)",
+        "Statistics Finland Paavo open data: population, income, employment and age structure per postal-code area — statistics joined to postal-area geometry.",
+        "feature", AOI, "OGC:CRS84", ("demographics", f"{EXTRA}/statfi_paavo.parquet", "geoparquet"),
+        "demographics of the postal area at the site: population, median income (EUR), jobs, unemployed",
+        "demographics; population; income; jobs; residential; statistics; can-i-build-a-data-center")
+    add("vaestoruutu_1km", "statfi-vaesto", "Population grid 1 km (2025)",
+        "Statistics Finland 1 km population grid: inhabitants and age groups per cell — residential density right at the site.",
+        "feature", AOI, "OGC:CRS84", ("popgrid", f"{EXTRA}/statfi_popgrid.parquet", "geoparquet"),
+        "population in the 1 km cell at the site (with age groups)",
+        "population; density; residential; statistics; can-i-build-a-data-center")
     return R
 
 
