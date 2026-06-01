@@ -216,6 +216,9 @@ def _example_query(mat):
                 "ST_Transform(geom,'EPSG:4326','EPSG:3067'),"
                 "ST_Transform(ST_Point(:lon,:lat),'EPSG:4326','EPSG:3067')))) AS metres "
                 f"FROM read_parquet('{val}');")
+    if kind == "class":  # land-use classification: which polygon covers the site (point-in-polygon)
+        return (f"SELECT class_2018 AS land_use FROM read_parquet('{val}') "
+                "WHERE ST_Contains(geom, ST_Point(:lon,:lat)) LIMIT 1;")
     if "ndvi" in val:  # raster (raquet) — NDVI = (NIR-Red)/(NIR+Red)
         return _GRID + ("SELECT avg((b2-b1)/(b2+b1)) AS ndvi FROM ("
                         "SELECT ST_RasterValue(r.block,r.band_2,ST_Point(g.lon,g.lat),r.metadata) b2,"
@@ -275,6 +278,11 @@ def collect_rows():
         ("url", f"{BASE_URI}/data/raster/ndvi.parquet", "raquet"),
         "read_raquet; NDVI=(band_2-band_1)/(band_2+band_1)",
         "vegetation; forest clearing; land cover; can-i-build-a-data-center")
+    add("urbanatlas", "copernicus-urbanatlas", "Urban Atlas 2018 land use (Helsinki FUA)",
+        "Copernicus Urban Atlas 2018 land-use polygons for the Helsinki Functional Urban Area — the authoritative land-use class per parcel (e.g. Forests, Discontinuous urban fabric, Industrial).",
+        "feature", [24.15, 60.08, 24.80, 60.40], "OGC:CRS84", ("class", f"{EXTRA}/urbanatlas.parquet", "geoparquet"),
+        "land-use class at the site (point-in-polygon): SELECT class_2018 WHERE ST_Contains(geom, site)",
+        "land use; land cover; forest; urban fabric; residential; can-i-build-a-data-center")
     # SYKE — Finnish Environment Institute. Flood + Natura + groundwater MATERIALIZED
     # (clipped to the Helsinki-region AOI from SYKE's OGC API Features); CORINE still convert-on-demand.
     AOI = [24.15, 60.08, 24.80, 60.40]

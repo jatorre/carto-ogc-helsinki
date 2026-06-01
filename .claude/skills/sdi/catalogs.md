@@ -36,8 +36,10 @@ power lines, water bodies, protected areas, buildings, roads, land-cover feature
 - **Attach as** `nls` · **endpoint** `https://8et4c.upcloudobjects.com/carto-ogc-connect-helsinki/catalog/national-land-survey`
 
 ### 🇪🇺 Copernicus (European Union)
-Earth observation — what's actually on the ground, recently (Sentinel-2). Vegetation /
-land-cover context (NDVI). **1 dataset, materialized.**
+Earth observation + land monitoring — what's actually on the ground. **2 datasets, both
+materialized**: Sentinel-2 `ndvi` (vegetation index) and `urbanatlas` (Copernicus Urban
+Atlas 2018 land-use polygons for the Helsinki FUA — authoritative class per parcel:
+Forests / urban fabric / industrial / …). NDVI gives the index; Urban Atlas gives the class.
 - **Attach as** `cop` · **endpoint** `https://8et4c.upcloudobjects.com/carto-ogc-connect-helsinki/catalog/copernicus`
 
 ### 🇫🇮 Finnish Environment Institute (SYKE)
@@ -47,7 +49,7 @@ flood-hazard zones (`tulvavaarakartta`, inundation extent by return period), Nat
 CORINE land cover is still convert-on-demand. (Clipped to the Helsinki-region AOI.)
 - **Attach as** `syke` · **endpoint** `https://8et4c.upcloudobjects.com/carto-ogc-connect-helsinki/catalog/finnish-environment-institute`
 
-> A **combined** catalog also exists at `…/catalog` (all three publishers, 134 datasets,
+> A **combined** catalog also exists at `…/catalog` (all three publishers, 135 datasets,
 > vectors as `sdi.v2.*`) — the precomputed web demo uses it. For the **live agent demo,
 > prefer the three publisher endpoints above** — attaching them separately is the point:
 > a real federation of independent, sovereign sources.
