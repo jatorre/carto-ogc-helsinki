@@ -5,8 +5,9 @@
 > **attach it and read its own STAC index** (`catalog.datasets`); each dataset carries its
 > own metadata, including a runnable `example_query`. That's the progressive discovery:
 > registry → catalog → dataset → query. Adding a source = a new endpoint + an entry here;
-> the skill doesn't change. Today there are three (the Portolan Helsinki demo); there will
-> be many.
+> the skill doesn't change. Today there are **five** (the Portolan Helsinki demo) spanning
+> EU, national, regional and municipal tiers — and one is **non-geospatial**, to show the
+> SDI federates open data, not just maps. There will be many more.
 
 ## How catalogs work (applies to all of them)
 Each is an **Apache Iceberg** catalog on object storage (UpCloud, European / sovereign
@@ -49,7 +50,23 @@ flood-hazard zones (`tulvavaarakartta`, inundation extent by return period), Nat
 CORINE land cover is still convert-on-demand. (Clipped to the Helsinki-region AOI.)
 - **Attach as** `syke` · **endpoint** `https://8et4c.upcloudobjects.com/carto-ogc-connect-helsinki/catalog/finnish-environment-institute`
 
-> A **combined** catalog also exists at `…/catalog` (all three publishers, 135 datasets,
+### 🏙️ Helsinki Region — HSY (regional)
+Regional planning. **1 dataset, materialized**: `seuturamava_kortteli` (SeutuRAMAVA) —
+per detailed-plan-block **land-use category + building-rights reserve** (built vs unused
+floor area by use class AK/AP/K/T/Y), aggregated from the municipal plans across Espoo /
+Vantaa / Kauniainen. Answers **"what does the plan permit at this exact block?"** (e.g. the
+Espoo site is industrial-zoned with ~70,000 m² of unused building rights). Vector.
+- **Attach as** `hsy` · **endpoint** `https://8et4c.upcloudobjects.com/carto-ogc-connect-helsinki/catalog/helsinki-region-hsy`
+
+### ⚡ Fingrid (national TSO) — NON-geospatial
+The Finnish transmission system operator. **1 dataset, materialized**: `electricity_consumption`
+— national grid load, 15-min MW time-series (30-day snapshot). **No geometry** — it's a plain
+table, here to show the SDI federates open *data*, not just maps. Grid-load / capacity context
+for siting a large consumer (a hyperscale data centre is ~100–300 MW; Finland runs ~8–10 GW).
+`example_query` is a non-spatial aggregate (avg / peak / min MW).
+- **Attach as** `fingrid` · **endpoint** `https://8et4c.upcloudobjects.com/carto-ogc-connect-helsinki/catalog/fingrid`
+
+> A **combined** catalog also exists at `…/catalog` (all publishers, 137 datasets,
 > vectors as `sdi.v2.*`) — the precomputed web demo uses it. For the **live agent demo,
 > prefer the three publisher endpoints above** — attaching them separately is the point:
 > a real federation of independent, sovereign sources.

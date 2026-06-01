@@ -185,7 +185,23 @@ def publisher_of(collection):
         return "national-land-survey"
     if collection == "syke":
         return "finnish-environment-institute"
+    if collection.startswith("hsy"):
+        return "helsinki-region-hsy"
+    if collection.startswith("statfi") or collection.startswith("tilastokeskus"):
+        return "statistics-finland"
+    if collection.startswith("fingrid"):
+        return "fingrid"
     return "copernicus"
+
+# publisher -> (endpoint sub-path, idx storage slug). The combined catalog is at the root.
+PUBLISHERS = {
+    "national-land-survey":          ("national-land-survey", "nls"),
+    "copernicus":                    ("copernicus", "cop"),
+    "finnish-environment-institute": ("finnish-environment-institute", "syke"),
+    "helsinki-region-hsy":           ("helsinki-region-hsy", "hsy"),
+    "statistics-finland":            ("statistics-finland", "statfi"),
+    "fingrid":                       ("fingrid", "fingrid"),
+}
 
 
 def _wkb_box(x0, y0, x1, y1):
@@ -219,6 +235,13 @@ def _example_query(mat):
     if kind == "class":  # land-use classification: which polygon covers the site (point-in-polygon)
         return (f"SELECT class_2018 AS land_use FROM read_parquet('{val}') "
                 "WHERE ST_Contains(geom, ST_Point(:lon,:lat)) LIMIT 1;")
+    if kind == "zoning":  # plan block at the site: built vs unused building rights by use category
+        return ("SELECT kunta, round(rakerayht) AS built_floor_m2, round(laskvar_yh) AS reserve_floor_m2, "
+                f"round(laskvar_t) AS reserve_industrial_m2 FROM read_parquet('{val}') "
+                "WHERE ST_Contains(geom, ST_Point(:lon,:lat)) LIMIT 1;")
+    if kind == "tabular":  # NON-spatial dataset (e.g. grid time-series): aggregate, no geometry
+        return ("SELECT round(avg(consumption_mw)) AS avg_load_mw, round(max(consumption_mw)) AS peak_load_mw, "
+                f"round(min(consumption_mw)) AS min_load_mw FROM read_parquet('{val}');")
     if "ndvi" in val:  # raster (raquet) — NDVI = (NIR-Red)/(NIR+Red)
         return _GRID + ("SELECT avg((b2-b1)/(b2+b1)) AS ndvi FROM ("
                         "SELECT ST_RasterValue(r.block,r.band_2,ST_Point(g.lon,g.lat),r.metadata) b2,"
@@ -304,6 +327,19 @@ def collect_rows():
     add("corine-land-cover", "syke", "CORINE Land Cover 2018",
         "Pan-European CORINE land cover for Finland, published by SYKE.", "coverage", AOI, "OGC:CRS84", None, None,
         "land cover; vegetation; can-i-build-a-data-center")
+    # HSY (Helsinki Region Environmental Services) — regional planning. SeutuRAMAVA = per
+    # detailed-plan-block land-use category + built vs unused building-rights reserve.
+    add("seuturamava_kortteli", "hsy-maankaytto", "Zoning / building-rights reserve by plan block (SeutuRAMAVA)",
+        "HSY regional building-land reserve aggregated from municipal detailed plans, per plan block: land-use category, built floor area, and unused building-rights reserve (AK/AP/K/T/Y). Covers Espoo/Vantaa/Kauniainen.",
+        "feature", AOI, "OGC:CRS84", ("zoning", f"{EXTRA}/hsy_zoning.parquet", "geoparquet"),
+        "plan block at the site: built vs reserve floor area by use category (T = industrial)",
+        "zoning; land-use plan; building rights; what does the plan permit; can-i-build-a-data-center")
+    # Fingrid — NON-spatial: national electricity grid load (time-series). Shows the SDI is not geo-only.
+    add("electricity_consumption", "fingrid-grid", "Finland electricity consumption (national grid load)",
+        "Fingrid national electricity consumption, 15-min values in MW (30-day snapshot). Non-spatial time-series — grid-load / capacity context for siting a large consumer like a data centre.",
+        "timeseries", None, None, ("tabular", f"{EXTRA}/fingrid_consumption.parquet", "parquet"),
+        "recent national load: avg / peak / min MW (a hyperscale data centre is ~100-300 MW for scale)",
+        "electricity; grid; capacity; power; non-spatial; can-i-build-a-data-center")
     return R
 
 
@@ -454,32 +490,29 @@ def main():
     # 2) STAC indexes — one combined (for the `sdi` catalog / web-app) + one per publisher
     R = collect_rows()
     all_idx = list(range(len(R["id"])))
-    by_pub = lambda p: [i for i in all_idx if R["publisher"][i] == p]
     combined_meta, n_all = write_index(R, all_idx, "catalog/datasets", "combined",
                                        "STAC catalog index — all publishers (stac-geoparquet)")
-    nls_meta, n_nls = write_index(R, by_pub("national-land-survey"), "idx/nls", "publisher",
-                                  "National Land Survey of Finland — STAC index")
-    syke_meta, n_syke = write_index(R, by_pub("finnish-environment-institute"), "idx/syke", "publisher",
-                                    "Finnish Environment Institute (SYKE) — STAC index")
-    cop_meta, n_cop = write_index(R, by_pub("copernicus"), "idx/cop", "publisher",
-                                  "Copernicus (EU) — STAC index")
-    print(f"indexes: combined {n_all} · NLS {n_nls} · SYKE {n_syke} · Copernicus {n_cop}")
-
-    # 3) IRC surfaces
     vtables = [(k.split("/")[0], k.split("/")[1], m, k) for k, m in data_meta.items()]  # v2/v3 tables
-    combined = make_surface(vtables + [("catalog", "datasets", combined_meta, "catalog/datasets")])
-    nls = make_surface(vtables + [("catalog", "datasets", nls_meta, "idx/nls")])
-    syke = make_surface([("catalog", "datasets", syke_meta, "idx/syke")])
-    cop = make_surface([("catalog", "datasets", cop_meta, "idx/cop")])
-    catalogs = {"": combined, "national-land-survey": nls,
-                "finnish-environment-institute": syke, "copernicus": cop}
+    catalogs = {"": make_surface(vtables + [("catalog", "datasets", combined_meta, "catalog/datasets")])}
+
+    # 3) one publisher sub-catalog per distinct publisher present in the rows
+    summary = [f"combined {n_all}"]
+    for pub in sorted(set(R["publisher"])):
+        endpoint, slug = PUBLISHERS[pub]
+        idxs = [i for i in all_idx if R["publisher"][i] == pub]
+        meta, n = write_index(R, idxs, f"idx/{slug}", "publisher", f"{pub} — STAC index")
+        tabs = (vtables if pub == "national-land-survey" else []) + \
+               [("catalog", "datasets", meta, f"idx/{slug}")]
+        catalogs[endpoint] = make_surface(tabs)
+        summary.append(f"{endpoint} {n}")
+    print("indexes: " + " · ".join(summary))
 
     for cname, surf in catalogs.items():
         d = STAGING / "_surface" / (cname or "_combined")
         d.mkdir(parents=True, exist_ok=True)
         for k, v in surf.items():
             (d / (k.replace("/", "__") + ".json")).write_text(v)
-    print(f"staged combined + 3 publisher catalogs ({len(data_meta)} data tables) under {STAGING}")
+    print(f"staged combined + {len(catalogs)-1} publisher catalogs ({len(data_meta)} data tables) under {STAGING}")
     if "--publish" in sys.argv:
         publish(catalogs)
 
