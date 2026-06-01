@@ -6,6 +6,7 @@ so it doubles as a **leave-behind** for the audience.
 
 🔗 **Slides:** https://jatorre.github.io/carto-ogc-helsinki/
 🔗 **Live demo:** https://jatorre.github.io/carto-ogc-helsinki/webapp/
+📄 **How the live agent demo works:** [`docs/how-it-works.md`](docs/how-it-works.md) — the skill-driven, progressively-discovering SDI flow (part of **Portolan**).
 
 > **Thesis:** SDIs were built to serve geospatial *experts*. In the AI era they must
 > also serve *agents* — and agents answer questions directly for everyone. That makes
