@@ -397,8 +397,8 @@ def collect_rows():
     add("places", "overture-places", "Points of interest (Overture Maps, global)",
         "Overture Maps global places — a slice of the planet-scale, cloud-native GeoParquet catalog (released on object storage, queried with DuckDB exactly like everything else here). POI density / activity around the site.",
         "feature", [24.15, 60.08, 24.80, 60.40], "OGC:CRS84", ("poicount", f"{EXTRA}/overture_places.parquet", "geoparquet"),
-        "number of Overture places within 1 km of the site",
-        "points of interest; activity; global; can-i-build-a-data-center")
+        "number of Overture places within 1 km of the site (filter `category` for supermarkets, schools, etc.)",
+        "points of interest; supermarkets; grocery; amenities; services; activity; global; can-i-build-a-data-center")
     # Eurostat (EUROPEAN) — NON-spatial: EU-wide electricity prices, the data-centre cost driver.
     add("electricity_prices", "eurostat-energy", "Electricity prices, industrial (Eurostat)",
         "Eurostat electricity prices for industrial consumers (band 2000–20000 MWh/yr, incl. taxes, €/kWh): Finland vs the EU-27 average — the cost driver behind data-centre siting. Non-spatial.",

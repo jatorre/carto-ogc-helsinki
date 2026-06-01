@@ -48,6 +48,18 @@ needs the CLI; `-unsigned` to load it). Vectors are GeoParquet (`v2.*`, WKB + bb
 rasters are raquet files (`read_raquet('<href>')`). For metric distance, transform to the
 CRS the dataset's metadata specifies (Finnish data → EPSG:3067).
 
+## Composing answers across catalogs (this is the powerful part)
+Most real questions need **2–3 publishers joined by location or arithmetic**, not one lookup.
+Discover the relevant datasets, run each one's `example_query`, then combine. Patterns seen:
+
+- **"Viability of this site?"** → the full screen: grid/water/protected (NLS) + flood/Natura/groundwater (SYKE) + land cover (Copernicus) + zoning (HSY) + climate (Location Finland).
+- **"What radius covers as many people as the data centre consumes?"** → DC load ÷ per-capita power → people-equivalent, then grow a radius over the **population grid** (Statistics Finland) until the cumulative population matches. *(per-capita ≈ Fingrid national load ÷ Finland population ≈ 1.55 kW/person; a ~100 MW DC ≈ 64,000 people ≈ everyone within ~4 km.)*
+- **"How much will it pay for electricity — and in Berlin?"** → DC load × hours × **Eurostat** industrial price, per country (FI vs DE). *(100 MW ≈ 876 GWh/yr → ≈ €74M in Finland vs €208M in Germany.)*
+- **"Is there housing for 3,000 workers?"** → workers → dwellings/floor-area need, vs **HSY** residential building-rights reserve (`laskvar_ak`) and/or **Paavo** dwellings nearby.
+- **"Enough supermarkets?"** → **Overture** `places` filtered to `category IN ('supermarket','grocery_store')` within a radius, vs **population** (pop grid / Paavo) → shops per 1,000 people.
+
+State your assumptions (DC size, per-capita figures) out loud, and keep every number traceable to the dataset + query that produced it.
+
 ## Honest framing — do NOT regress
 - **Grid:** "favorable proximity, subject to capacity and permitting" — never "cheap/excellent grid".
 - **Flood:** prefer SYKE's flood-hazard zones (`tulvavaarakartta`) when materialized — report distance to / inside a mapped zone (with return period). Only if no flood layer is available, infer cautiously from the DEM ("no obvious topographic flood concern from the DEM; authoritative flood-hazard maps would sharpen this"). Never "low flood risk" from elevation alone.
