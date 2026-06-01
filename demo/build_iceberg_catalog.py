@@ -189,6 +189,32 @@ def _wkb_box(x0, y0, x1, y1):
     return b
 
 
+# A concrete, runnable example query carried IN the dataset metadata — so an agent
+# learns how to query each dataset by reading its own STAC properties (self-describing),
+# not from the skill. `<catalog>` = the alias you ATTACH this catalog as; :lon/:lat = site.
+_GRID = ("WITH grid AS (SELECT :lon+(i-3)*0.0009 lon, :lat+(j-3)*0.00045 lat "
+         "FROM range(0,7) a(i), range(0,7) b(j)) ")
+def _example_query(mat):
+    if not mat:
+        return None
+    kind, val, _fmt = mat
+    if kind == "table":  # vector (GeoParquet, WKB) — nearest distance in metric CRS
+        return ("SELECT round(min(ST_Distance("
+                "ST_Transform(ST_GeomFromWKB(geom_wkb),'EPSG:4326','EPSG:3067'),"
+                "ST_Transform(ST_Point(:lon,:lat),'EPSG:4326','EPSG:3067')))) AS metres "
+                f"FROM <catalog>.v2.{val};")
+    if "ndvi" in val:  # raster (raquet) — NDVI = (NIR-Red)/(NIR+Red)
+        return _GRID + ("SELECT avg((b2-b1)/(b2+b1)) AS ndvi FROM ("
+                        "SELECT ST_RasterValue(r.block,r.band_2,ST_Point(g.lon,g.lat),r.metadata) b2,"
+                        "ST_RasterValue(r.block,r.band_1,ST_Point(g.lon,g.lat),r.metadata) b1 "
+                        f"FROM grid g, read_raquet('{val}') r "
+                        "WHERE ST_Contains(ST_GeomFromQuadbin(r.block),ST_Point(g.lon,g.lat)) AND r.band_1 IS NOT NULL);")
+    return _GRID + ("SELECT min(elev) AS min_m, stddev(elev) AS slope_sigma FROM ("
+                    "SELECT ST_RasterValue(r.block,r.band_1,ST_Point(g.lon,g.lat),r.metadata) elev "
+                    f"FROM grid g, read_raquet('{val}') r "
+                    "WHERE ST_Contains(ST_GeomFromQuadbin(r.block),ST_Point(g.lon,g.lat)));")
+
+
 def collect_rows():
     """All STAC items as a row dict R, plus a parallel `publisher` list and a `mat`
     list of (kind, value, format) — kind in {'table','url',None} — so each index can
@@ -208,7 +234,8 @@ def collect_rows():
             "title": title, "description": (desc or "")[:400],
             "keywords": kw.split("; ") if kw else [], "item_type": item_type, "crs": crs,
             "materialized": mat is not None, "data_format": (mat[2] if mat else None),
-            "access_recipe": (recipe if recipe else "convert on demand: publisher OGC API Features -> gpio -> bucket")}))
+            "access_recipe": (recipe if recipe else "convert on demand: publisher OGC API Features -> gpio -> bucket"),
+            "example_query": _example_query(mat)}))
         R["stac_version"].append("1.1.0"); R["type"].append("Feature")
         R["publisher"].append(publisher_of(coll)); R["mat"].append(mat)
     for c in cols:
