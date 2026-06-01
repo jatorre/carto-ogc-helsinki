@@ -156,16 +156,29 @@ def build_v3(name, info):
 
 
 # --- catalog.datasets : stac-geoparquet (STAC Items in Iceberg) -------------
-MATERIALIZED = {  # NLS id -> (asset href/ref, format, recipe, keywords)
-    "sahkolinja": ("sdi.v2.power_lines", "geoparquet",
+# Federation by real PUBLISHER. Each publisher converts ITS OWN data, so each gets its
+# OWN filtered STAC index. Materialized vector data is a base table name (power_lines/
+# protected/water); the href is rendered per scope — combined catalog (attached as
+# `sdi`) uses `sdi.v2.<t>`, a publisher catalog uses `v2.<t>` (relative to its alias).
+MATERIALIZED = {  # NLS id -> (v2 table base, format, recipe, keywords)
+    "sahkolinja": ("power_lines", "geoparquet",
                    "ST_Distance to ST_GeomFromWKB(geom_wkb) in EPSG:3067", "grid proximity; can-i-build-a-data-center"),
-    "luonnonsuojelualue": ("sdi.v2.protected", "geoparquet",
+    "luonnonsuojelualue": ("protected", "geoparquet",
                    "ST_Distance to protected polygons in EPSG:3067", "environmental constraint; can-i-build-a-data-center"),
-    "jarvi": ("sdi.v2.water", "geoparquet",
+    "jarvi": ("water", "geoparquet",
                    "ST_Distance to lakes in EPSG:3067", "water/cooling/flood context; can-i-build-a-data-center"),
 }
 RELEVANT = {"rakennus": "buildings; residential proximity", "tieviiva": "roads; access",
             "muuntaja": "transformer/substation; grid", "korkeuskayra": "contours; terrain"}
+
+# collection prefix -> publisher sub-catalog (who converted it)
+def publisher_of(collection):
+    if collection.startswith("nls"):
+        return "national-land-survey"
+    if collection == "syke":
+        return "finnish-environment-institute"
+    return "copernicus"
+
 
 def _wkb_box(x0, y0, x1, y1):
     if None in (x0, y0, x1, y1):
@@ -175,11 +188,17 @@ def _wkb_box(x0, y0, x1, y1):
         b += struct.pack("<dd", float(x), float(y))
     return b
 
-def build_registry():
+
+def collect_rows():
+    """All STAC items as a row dict R, plus a parallel `publisher` list and a `mat`
+    list of (kind, value, format) — kind in {'table','url',None} — so each index can
+    render assets/hrefs for its own scope."""
     cols = json.loads(Path("/tmp/nls_all.json").read_text())["collections"]
     R = {k: [] for k in ("id", "collection", "geometry", "xmin", "ymin", "xmax", "ymax",
-                         "datetime", "properties", "assets", "stac_version", "type")}
-    def add(cid, coll, title, desc, item_type, bbox, crs, mat, kw):
+                         "datetime", "properties", "assets_recipe", "stac_version", "type",
+                         "publisher", "mat")}
+    def add(cid, coll, title, desc, item_type, bbox, crs, mat, recipe, kw):
+        # mat: ('table','power_lines','geoparquet') | ('url',<href>,'raquet') | None
         x0, y0, x1, y1 = (list(bbox) + [None] * 4)[:4] if bbox else (None, None, None, None)
         R["id"].append(cid); R["collection"].append(coll)
         R["geometry"].append(_wkb_box(x0, y0, x1, y1))
@@ -188,186 +207,218 @@ def build_registry():
         R["properties"].append(json.dumps({
             "title": title, "description": (desc or "")[:400],
             "keywords": kw.split("; ") if kw else [], "item_type": item_type, "crs": crs,
-            "materialized": mat is not None, "data_format": (mat[1] if mat else None),
-            "access_recipe": (mat[2] if mat else "convert on demand: NLS OGC API Features -> gpio -> bucket")}))
-        R["assets"].append(json.dumps({"data": {"href": mat[0], "type": mat[1], "roles": ["data"]}} if mat else {}))
+            "materialized": mat is not None, "data_format": (mat[2] if mat else None),
+            "access_recipe": (recipe if recipe else "convert on demand: publisher OGC API Features -> gpio -> bucket")}))
         R["stac_version"].append("1.1.0"); R["type"].append("Feature")
+        R["publisher"].append(publisher_of(coll)); R["mat"].append(mat)
     for c in cols:
         sp = (((c.get("extent") or {}).get("spatial") or {}).get("bbox") or [None])
         bbox = sp[0] if (sp and isinstance(sp[0], list)) else None
         m = MATERIALIZED.get(c["id"])
         add(c["id"], "nls-topographic", c.get("title"), c.get("description"), c.get("itemType"),
-            bbox, "OGC:CRS84", (m[0], m[1], m[2]) if m else None, m[3] if m else RELEVANT.get(c["id"], ""))
+            bbox, "OGC:CRS84", (("table", m[0], m[1]) if m else None), (m[2] if m else None),
+            m[3] if m else RELEVANT.get(c["id"], ""))
     add("korkeusmalli_2m", "nls-elevation", "Elevation model 2 m (laser DEM)",
         "NLS 2 m laser-scanned elevation model — flatness + flood for data-center siting.", "coverage",
         [24.62, 60.21, 24.76, 60.27], "EPSG:3067",
-        (f"{BASE_URI}/data/raster/dem_2m.parquet", "raquet",
-         "read_raquet + ST_RasterValue grid-sample (finest zoom via ST_GeomFromQuadbin)"),
+        ("url", f"{BASE_URI}/data/raster/dem_2m.parquet", "raquet"),
+        "read_raquet + ST_RasterValue grid-sample (finest zoom via ST_GeomFromQuadbin)",
         "flatness; flood; elevation; can-i-build-a-data-center")
     add("ndvi", "copernicus-sentinel2", "Sentinel-2 NDVI (red+NIR)",
         "Copernicus Sentinel-2 red/NIR for NDVI — vegetation/forest that would be cleared.", "coverage",
         [24.62, 60.21, 24.76, 60.27], "EPSG:3857",
-        (f"{BASE_URI}/data/raster/ndvi.parquet", "raquet", "read_raquet; NDVI=(band_2-band_1)/(band_2+band_1)"),
+        ("url", f"{BASE_URI}/data/raster/ndvi.parquet", "raquet"),
+        "read_raquet; NDVI=(band_2-band_1)/(band_2+band_1)",
         "vegetation; forest clearing; land cover; can-i-build-a-data-center")
-    # SYKE — Finnish Environment Institute: real publisher, datasets CATALOGUED (convert-on-demand, not materialized)
+    # SYKE — Finnish Environment Institute: real publisher, datasets CATALOGUED (convert-on-demand)
     FIN = [19.0, 59.5, 31.6, 70.1]
     add("natura2000", "syke", "Natura 2000 protected areas",
-        "EU Natura 2000 network sites in Finland, published by SYKE.", "feature", FIN, "OGC:CRS84", None,
+        "EU Natura 2000 network sites in Finland, published by SYKE.", "feature", FIN, "OGC:CRS84", None, None,
         "environmental constraint; protected; can-i-build-a-data-center")
     add("tulvavaarakartta", "syke", "Flood hazard maps",
-        "Flood risk / hazard zones, published by SYKE.", "feature", FIN, "OGC:CRS84", None,
+        "Flood risk / hazard zones, published by SYKE.", "feature", FIN, "OGC:CRS84", None, None,
         "flood risk; can-i-build-a-data-center")
     add("corine-land-cover", "syke", "CORINE Land Cover 2018",
-        "Pan-European CORINE land cover for Finland, published by SYKE.", "coverage", FIN, "OGC:CRS84", None,
+        "Pan-European CORINE land cover for Finland, published by SYKE.", "coverage", FIN, "OGC:CRS84", None, None,
         "land cover; vegetation; can-i-build-a-data-center")
+    return R
 
-    bbox_t = pa.struct([pa.field("xmin", pa.float64(), metadata=_fmeta(10)),
-                        pa.field("ymin", pa.float64(), metadata=_fmeta(11)),
-                        pa.field("xmax", pa.float64(), metadata=_fmeta(12)),
-                        pa.field("ymax", pa.float64(), metadata=_fmeta(13))])
-    schema = pa.schema([
-        pa.field("id", pa.string(), metadata=_fmeta(1)),
-        pa.field("collection", pa.string(), metadata=_fmeta(2)),
-        pa.field("geometry", pa.binary(), metadata=_fmeta(3)),
-        pa.field("bbox", bbox_t, metadata=_fmeta(4)),
-        pa.field("datetime", pa.timestamp("us", tz="UTC"), metadata=_fmeta(5)),
-        pa.field("properties", pa.string(), metadata=_fmeta(6)),
-        pa.field("assets", pa.string(), metadata=_fmeta(7)),
-        pa.field("stac_version", pa.string(), metadata=_fmeta(8)),
-        pa.field("type", pa.string(), metadata=_fmeta(9)),
-    ])
+
+def _render_assets(mat, scope):
+    """scope: 'combined' -> sdi.v2.<t> ; 'publisher' -> v2.<t> (relative to alias)."""
+    if mat is None:
+        return json.dumps({})
+    kind, val, fmt = mat
+    href = (f"sdi.v2.{val}" if scope == "combined" else f"v2.{val}") if kind == "table" else val
+    return json.dumps({"data": {"href": href, "type": fmt, "roles": ["data"]}})
+
+
+# stac-geoparquet Iceberg schema (shared by every index table)
+_BBOX_T = pa.struct([pa.field("xmin", pa.float64(), metadata=_fmeta(10)),
+                     pa.field("ymin", pa.float64(), metadata=_fmeta(11)),
+                     pa.field("xmax", pa.float64(), metadata=_fmeta(12)),
+                     pa.field("ymax", pa.float64(), metadata=_fmeta(13))])
+_IDX_SCHEMA = pa.schema([
+    pa.field("id", pa.string(), metadata=_fmeta(1)),
+    pa.field("collection", pa.string(), metadata=_fmeta(2)),
+    pa.field("geometry", pa.binary(), metadata=_fmeta(3)),
+    pa.field("bbox", _BBOX_T, metadata=_fmeta(4)),
+    pa.field("datetime", pa.timestamp("us", tz="UTC"), metadata=_fmeta(5)),
+    pa.field("properties", pa.string(), metadata=_fmeta(6)),
+    pa.field("assets", pa.string(), metadata=_fmeta(7)),
+    pa.field("stac_version", pa.string(), metadata=_fmeta(8)),
+    pa.field("type", pa.string(), metadata=_fmeta(9))])
+_IDX_ICE = Schema(
+    NestedField(1, "id", StringType(), required=False),
+    NestedField(2, "collection", StringType(), required=False),
+    NestedField(3, "geometry", BinaryType(), required=False),
+    NestedField(4, "bbox", StructType(
+        NestedField(10, "xmin", DoubleType(), required=False),
+        NestedField(11, "ymin", DoubleType(), required=False),
+        NestedField(12, "xmax", DoubleType(), required=False),
+        NestedField(13, "ymax", DoubleType(), required=False)), required=False),
+    NestedField(5, "datetime", TimestamptzType(), required=False),
+    NestedField(6, "properties", StringType(), required=False),
+    NestedField(7, "assets", StringType(), required=False),
+    NestedField(8, "stac_version", StringType(), required=False),
+    NestedField(9, "type", StringType(), required=False))
+_IDX_FIELDS = [{"id": 1, "name": "id", "required": False, "type": "string"},
+               {"id": 2, "name": "collection", "required": False, "type": "string"},
+               {"id": 3, "name": "geometry", "required": False, "type": "binary"},
+               {"id": 4, "name": "bbox", "required": False, "type": {"type": "struct", "fields": [
+                   {"id": 10, "name": "xmin", "required": False, "type": "double"},
+                   {"id": 11, "name": "ymin", "required": False, "type": "double"},
+                   {"id": 12, "name": "xmax", "required": False, "type": "double"},
+                   {"id": 13, "name": "ymax", "required": False, "type": "double"}]}},
+               {"id": 5, "name": "datetime", "required": False, "type": "timestamptz"},
+               {"id": 6, "name": "properties", "required": False, "type": "string"},
+               {"id": 7, "name": "assets", "required": False, "type": "string"},
+               {"id": 8, "name": "stac_version", "required": False, "type": "string"},
+               {"id": 9, "name": "type", "required": False, "type": "string"}]
+_IDX_NAMEMAP = [{"field-id": 1, "names": ["id"]}, {"field-id": 2, "names": ["collection"]},
+                {"field-id": 3, "names": ["geometry"]},
+                {"field-id": 4, "names": ["bbox"], "fields": [{"field-id": 10, "names": ["xmin"]},
+                 {"field-id": 11, "names": ["ymin"]}, {"field-id": 12, "names": ["xmax"]}, {"field-id": 13, "names": ["ymax"]}]},
+                {"field-id": 5, "names": ["datetime"]}, {"field-id": 6, "names": ["properties"]},
+                {"field-id": 7, "names": ["assets"]}, {"field-id": 8, "names": ["stac_version"]}, {"field-id": 9, "names": ["type"]}]
+_IDX_GEO = {"version": "1.0", "primary_column": "geometry", "columns": {"geometry": {
+    "encoding": "WKB", "crs": "OGC:CRS84", "edges": "planar", "bbox_columns": ["bbox"]}}}
+
+
+def write_index(R, idxs, storage_key, scope, title):
+    """Write a (filtered) stac-geoparquet index table for the given row indices."""
+    pick = lambda col: [R[col][i] for i in idxs]
     bbox_arr = pa.StructArray.from_arrays(
-        [pa.array(R["xmin"], pa.float64()), pa.array(R["ymin"], pa.float64()),
-         pa.array(R["xmax"], pa.float64()), pa.array(R["ymax"], pa.float64())], fields=bbox_t)
-    tbl = pa.table({"id": R["id"], "collection": R["collection"],
-                    "geometry": pa.array(R["geometry"], pa.binary()), "bbox": bbox_arr,
-                    "datetime": pa.array(R["datetime"], pa.timestamp("us", tz="UTC")),
-                    "properties": R["properties"], "assets": R["assets"],
-                    "stac_version": R["stac_version"], "type": R["type"]}, schema=schema)
-    root = STAGING / "data" / "catalog" / "datasets"
+        [pa.array(pick("xmin"), pa.float64()), pa.array(pick("ymin"), pa.float64()),
+         pa.array(pick("xmax"), pa.float64()), pa.array(pick("ymax"), pa.float64())], fields=_BBOX_T)
+    assets = [_render_assets(R["mat"][i], scope) for i in idxs]
+    tbl = pa.table({"id": pick("id"), "collection": pick("collection"),
+                    "geometry": pa.array(pick("geometry"), pa.binary()), "bbox": bbox_arr,
+                    "datetime": pa.array(pick("datetime"), pa.timestamp("us", tz="UTC")),
+                    "properties": pick("properties"), "assets": assets,
+                    "stac_version": pick("stac_version"), "type": pick("type")}, schema=_IDX_SCHEMA)
+    root = STAGING / "data" / storage_key
     (root / "data").mkdir(parents=True, exist_ok=True)
     pqpath = root / "data" / "datasets.parquet"
     pq.write_table(tbl, pqpath, compression="zstd")
-    ice = Schema(
-        NestedField(1, "id", StringType(), required=False),
-        NestedField(2, "collection", StringType(), required=False),
-        NestedField(3, "geometry", BinaryType(), required=False),
-        NestedField(4, "bbox", StructType(
-            NestedField(10, "xmin", DoubleType(), required=False),
-            NestedField(11, "ymin", DoubleType(), required=False),
-            NestedField(12, "xmax", DoubleType(), required=False),
-            NestedField(13, "ymax", DoubleType(), required=False)), required=False),
-        NestedField(5, "datetime", TimestamptzType(), required=False),
-        NestedField(6, "properties", StringType(), required=False),
-        NestedField(7, "assets", StringType(), required=False),
-        NestedField(8, "stac_version", StringType(), required=False),
-        NestedField(9, "type", StringType(), required=False))
-    fields = [{"id": 1, "name": "id", "required": False, "type": "string"},
-              {"id": 2, "name": "collection", "required": False, "type": "string"},
-              {"id": 3, "name": "geometry", "required": False, "type": "binary"},
-              {"id": 4, "name": "bbox", "required": False, "type": {"type": "struct", "fields": [
-                  {"id": 10, "name": "xmin", "required": False, "type": "double"},
-                  {"id": 11, "name": "ymin", "required": False, "type": "double"},
-                  {"id": 12, "name": "xmax", "required": False, "type": "double"},
-                  {"id": 13, "name": "ymax", "required": False, "type": "double"}]}},
-              {"id": 5, "name": "datetime", "required": False, "type": "timestamptz"},
-              {"id": 6, "name": "properties", "required": False, "type": "string"},
-              {"id": 7, "name": "assets", "required": False, "type": "string"},
-              {"id": 8, "name": "stac_version", "required": False, "type": "string"},
-              {"id": 9, "name": "type", "required": False, "type": "string"}]
-    namemap = [{"field-id": 1, "names": ["id"]}, {"field-id": 2, "names": ["collection"]},
-               {"field-id": 3, "names": ["geometry"]},
-               {"field-id": 4, "names": ["bbox"], "fields": [{"field-id": 10, "names": ["xmin"]},
-                {"field-id": 11, "names": ["ymin"]}, {"field-id": 12, "names": ["xmax"]}, {"field-id": 13, "names": ["ymax"]}]},
-               {"field-id": 5, "names": ["datetime"]}, {"field-id": 6, "names": ["properties"]},
-               {"field-id": 7, "names": ["assets"]}, {"field-id": 8, "names": ["stac_version"]}, {"field-id": 9, "names": ["type"]}]
-    geo = {"version": "1.0", "primary_column": "geometry", "columns": {"geometry": {
-        "encoding": "WKB", "crs": "OGC:CRS84", "edges": "planar", "bbox_columns": ["bbox"]}}}
-    props = {"geo": json.dumps(geo), "theme": "catalog-index", "format": "stac-geoparquet",
-             "title": "STAC catalog index — stac-geoparquet in Iceberg",
-             "semantics": json.dumps({"describes": "STAC Items for every dataset in the source catalogs (stac-geoparquet). properties.materialized=true means cloud-native data is published (assets.data.href); others catalogued & convertible on demand.",
+    qcat = "sdi" if scope == "combined" else "<this catalog>"
+    props = {"geo": json.dumps(_IDX_GEO), "theme": "catalog-index", "format": "stac-geoparquet", "title": title,
+             "semantics": json.dumps({"describes": "STAC Items for this catalog's datasets (stac-geoparquet). properties.materialized=true means cloud-native data is published (assets.data.href); others catalogued & convertible on demand.",
                                       "answers": ["dataset discovery", "what data exists", "is X available"],
-                                      "query_recipe": "SELECT id, collection, assets FROM sdi.catalog.datasets WHERE properties ILIKE '%data-center%'"})}
-    mp = write_static_catalog(table_root=root, iceberg_schema=ice, schema_json_fields=fields,
-                              name_mapping=namemap, data_files=[{"path": "data/datasets.parquet",
+                                      "query_recipe": f"SELECT id, collection, assets FROM {qcat}.catalog.datasets WHERE properties ILIKE '%data-center%'"})}
+    mp = write_static_catalog(table_root=root, iceberg_schema=_IDX_ICE, schema_json_fields=_IDX_FIELDS,
+                              name_mapping=_IDX_NAMEMAP, data_files=[{"path": "data/datasets.parquet",
                               "size": pqpath.stat().st_size, "rows": tbl.num_rows, "lower": {}, "upper": {}}],
-                              format_version_in_metadata=2, location_uri=f"{BASE_URI}/data/catalog/datasets",
+                              format_version_in_metadata=2, location_uri=f"{BASE_URI}/data/{storage_key}",
                               extra_properties=props, last_column_id_override=13)
     return json.loads(Path(mp).read_text()), tbl.num_rows
 
 
-# --- IRC surface (derives namespaces/tables from meta_by_path) ---------------
-def surface(meta_by_path):
+# --- IRC surface ------------------------------------------------------------
+# tables: list of (namespace, name, meta, storage_key). metadata-location is derived
+# from storage_key so a publisher index (e.g. idx/nls) can appear as catalog.datasets.
+def make_surface(tables):
     s = {}
     def put(k, b): s[k] = json.dumps(b, indent=2)
     ns_tables = {}
-    for key in meta_by_path:
-        ns, t = key.split("/", 1)
-        ns_tables.setdefault(ns, []).append(t)
+    for ns, name, meta, key in tables:
+        ns_tables.setdefault(ns, []).append((name, meta, key))
     put("v1/config", {"defaults": {}, "overrides": {"prefix": IRC_PREFIX},
                       "endpoints": [f"GET /v1/{IRC_PREFIX}/namespaces",
                                     f"GET /v1/{IRC_PREFIX}/namespaces/{{namespace}}",
                                     f"GET /v1/{IRC_PREFIX}/namespaces/{{namespace}}/tables",
                                     f"GET /v1/{IRC_PREFIX}/namespaces/{{namespace}}/tables/{{table}}"]})
     put(f"v1/{IRC_PREFIX}/namespaces", {"namespaces": [[n] for n in ns_tables]})
-    for ns, tables in ns_tables.items():
+    for ns, items in ns_tables.items():
         put(f"v1/{IRC_PREFIX}/namespaces/{ns}", {"namespace": [ns], "properties": {}})
         put(f"v1/{IRC_PREFIX}/namespaces/{ns}/tables",
-            {"identifiers": [{"namespace": [ns], "name": t} for t in tables]})
-        for t in tables:
-            loc = f"{BASE_URI}/data/{ns}/{t}/metadata/v1.metadata.json"
-            put(f"v1/{IRC_PREFIX}/namespaces/{ns}/tables/{t}",
-                {"metadata-location": loc, "metadata": meta_by_path[f"{ns}/{t}"], "config": {}})
+            {"identifiers": [{"namespace": [ns], "name": nm} for nm, _, _ in items]})
+        for nm, meta, key in items:
+            loc = f"{BASE_URI}/data/{key}/metadata/v1.metadata.json"
+            put(f"v1/{IRC_PREFIX}/namespaces/{ns}/tables/{nm}",
+                {"metadata-location": loc, "metadata": meta, "config": {}})
     return s
 
 
-# Finland's SDI as a FEDERATION of catalogs — the agent attaches & searches each.
-# (Same verified tables, exposed through 3 separate IRC endpoints under catalog/<name>.)
-# Federation by real PUBLISHER (the way a national SDI actually federates):
-SUBCATALOGS = {
-    "national-land-survey":          ["v2/power_lines", "v3/power_lines", "v2/protected", "v3/protected",
-                                      "v2/water", "v3/water", "catalog/datasets"],   # Maanmittauslaitos (NLS) 🇫🇮
-    "finnish-environment-institute": ["catalog/datasets"],                            # SYKE 🇫🇮 (catalogued)
-    "copernicus":                    ["catalog/datasets"],                            # Copernicus / EU 🇪🇺
-}
-
-def publish(surf, subs):
+def publish(catalogs):
+    """catalogs: {sub_path_or_'': surface_dict}. '' = combined catalog at the root."""
     dst = f"upcloud/{BUCKET}/{PREFIX}"
     with tempfile.TemporaryDirectory() as tmp:
         def push(key, text):
             f = Path(tmp) / "o.json"; f.write_text(text)
             subprocess.run(["mc", "cp", "--quiet", str(f), f"{dst}/{key}"], check=True)
-        for key, text in sorted(surf.items()):
-            push(key, text)
-        for name, ssurf in subs.items():
-            for key, text in sorted(ssurf.items()):
-                push(f"{name}/{key}", text)
+        for name, surf in catalogs.items():
+            base = "" if name == "" else f"{name}/"
+            for key, text in sorted(surf.items()):
+                push(f"{base}{key}", text)
     subprocess.run(["mc", "cp", "--quiet", "--recursive", f"{STAGING}/data/", f"{dst}/data/"], check=True)
     for src, name in [("portolan/terrain/dem_2m.parquet", "dem_2m.parquet"),
                       ("portolan/eo/ndvi.parquet", "ndvi.parquet")]:
         subprocess.run(["mc", "cp", "--quiet", f"upcloud/{BUCKET}/{src}", f"{dst}/data/raster/{name}"], check=True)
     subprocess.run(["mc", "anonymous", "set", "download", dst], check=True)
-    print(f"published {len(subs)} federated catalogs + anonymous-read → {BASE_URI}/<catalog>")
+    print(f"published combined + {len(catalogs)-1} publisher catalogs (anonymous-read) → {BASE_URI}/<catalog>")
 
 
 def main():
     if STAGING.exists(): shutil.rmtree(STAGING)
-    meta = {}
+    # 1) NLS vector data tables (v2 = WKB/DuckDB, v3 = native geom)
+    data_meta = {}
     for name, info in DATASETS.items():
-        meta[f"v2/{name}"] = build_v2(name, info)
-        meta[f"v3/{name}"] = build_v3(name, info)
+        data_meta[f"v2/{name}"] = build_v2(name, info)
+        data_meta[f"v3/{name}"] = build_v3(name, info)
         print(f"built v2+v3: {name}")
-    reg_meta, nreg = build_registry()
-    meta["catalog/datasets"] = reg_meta
-    print(f"built stac-geoparquet registry: catalog.datasets ({nreg} STAC items)")
-    surf = surface(meta)
-    (STAGING / "_surface").mkdir(parents=True, exist_ok=True)
-    for k, v in surf.items():
-        (STAGING / "_surface" / (k.replace("/", "__") + ".json")).write_text(v)
-    subs = {name: surface({k: meta[k] for k in tabs}) for name, tabs in SUBCATALOGS.items()}
-    print(f"staged {len(surf)} surface objects + {len(meta)} tables + {len(subs)} federated catalogs under {STAGING}")
+
+    # 2) STAC indexes — one combined (for the `sdi` catalog / web-app) + one per publisher
+    R = collect_rows()
+    all_idx = list(range(len(R["id"])))
+    by_pub = lambda p: [i for i in all_idx if R["publisher"][i] == p]
+    combined_meta, n_all = write_index(R, all_idx, "catalog/datasets", "combined",
+                                       "STAC catalog index — all publishers (stac-geoparquet)")
+    nls_meta, n_nls = write_index(R, by_pub("national-land-survey"), "idx/nls", "publisher",
+                                  "National Land Survey of Finland — STAC index")
+    syke_meta, n_syke = write_index(R, by_pub("finnish-environment-institute"), "idx/syke", "publisher",
+                                    "Finnish Environment Institute (SYKE) — STAC index")
+    cop_meta, n_cop = write_index(R, by_pub("copernicus"), "idx/cop", "publisher",
+                                  "Copernicus (EU) — STAC index")
+    print(f"indexes: combined {n_all} · NLS {n_nls} · SYKE {n_syke} · Copernicus {n_cop}")
+
+    # 3) IRC surfaces
+    vtables = [(k.split("/")[0], k.split("/")[1], m, k) for k, m in data_meta.items()]  # v2/v3 tables
+    combined = make_surface(vtables + [("catalog", "datasets", combined_meta, "catalog/datasets")])
+    nls = make_surface(vtables + [("catalog", "datasets", nls_meta, "idx/nls")])
+    syke = make_surface([("catalog", "datasets", syke_meta, "idx/syke")])
+    cop = make_surface([("catalog", "datasets", cop_meta, "idx/cop")])
+    catalogs = {"": combined, "national-land-survey": nls,
+                "finnish-environment-institute": syke, "copernicus": cop}
+
+    for cname, surf in catalogs.items():
+        d = STAGING / "_surface" / (cname or "_combined")
+        d.mkdir(parents=True, exist_ok=True)
+        for k, v in surf.items():
+            (d / (k.replace("/", "__") + ".json")).write_text(v)
+    print(f"staged combined + 3 publisher catalogs ({len(data_meta)} data tables) under {STAGING}")
     if "--publish" in sys.argv:
-        publish(surf, subs)
+        publish(catalogs)
 
 
 if __name__ == "__main__":

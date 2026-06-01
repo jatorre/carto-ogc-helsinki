@@ -1,57 +1,106 @@
 ---
 name: sdi
-description: Answer spatial / location / site-feasibility questions about a place by querying a live, sovereign, cloud-native Spatial Data Infrastructure. Use this WHENEVER the user asks something geographic about a specific location — e.g. "is this a good site for a data center / factory / building?", "Microsoft wants to build near Helsinki, what does the data say?", "what are the constraints / problems at this location?", "what does the data tell me about building here?". Connects to an Iceberg/STAC catalog, discovers datasets, queries them with DuckDB, and writes an HTML report with a map. Trigger on spatial feasibility, siting, land-use, environmental/infrastructure-at-a-location questions.
+description: Answer spatial / location / site-feasibility questions about a place by querying a live, sovereign, cloud-native Spatial Data Infrastructure — a federation of Apache Iceberg + STAC catalogs on EU object storage, queried directly with DuckDB. Use this WHENEVER the user asks something geographic about a specific location — e.g. "is this a good site for a data center / factory / building?", "Microsoft wants to build near Helsinki, what does the data say?", "what are the constraints / problems at this location?", "what does the data tell me about building here?". Trigger on spatial feasibility, siting, land-use, environmental/infrastructure-at-a-location questions.
 ---
 
-# SDI — ask a sovereign spatial data infrastructure
+# SDI — ask a sovereign, federated spatial data infrastructure
 
-A next-generation SDI is something an agent can just *use*: a sovereign,
-serverless **Iceberg catalog** on EU object storage whose index is **STAC
-(stac-geoparquet)** and whose data is **cloud-native** (GeoParquet + raquet).
-You discover datasets by querying the catalog, query the data with DuckDB, and
-return a report — no GIS server, no portal, no data copies, nothing touching a
-US service.
+A next-generation SDI is something an agent can just **use**: each publisher exposes its
+own holdings as a **sovereign, serverless Apache Iceberg catalog** on EU object storage,
+indexed by **STAC (stac-geoparquet)**, with **cloud-native** data (GeoParquet + raquet).
+You discover datasets by querying the catalogs, query the data directly with **DuckDB**,
+and synthesize an answer — no GIS server, no portal, no data copies.
 
-The catalog already exists (a published artifact). You **use** it; you don't build it.
+**You do the work live** — attach the catalogs, search them, write the SQL, read the
+results, and build the artifact. Don't run a canned script; the point is that discovery
+is real and every number traces to a query. *(Part of the **Portolan** project — open,
+agent-ready SDI.)*
 
-## The catalog
-- **Endpoint:** `https://8et4c.upcloudobjects.com/carto-ogc-connect-helsinki/catalog` (UpCloud, sovereign 🇫🇮, anonymous read)
-- **Attach (DuckDB):**
-  ```sql
-  INSTALL iceberg; LOAD iceberg; INSTALL httpfs; LOAD httpfs;
-  INSTALL spatial; LOAD spatial; INSTALL raquet FROM community; LOAD raquet;
-  SET geometry_always_xy = true;
-  ATTACH 'sdi' AS sdi (TYPE iceberg, ENDPOINT '<endpoint>', AUTHORIZATION_TYPE 'none');
-  ```
-- **STAC index:** `sdi.catalog.datasets` — stac-geoparquet (id, collection, geometry, bbox, datetime, properties, assets). 130 datasets catalogued; `properties.materialized=true` ones have published cloud-native data (`assets.data.href`); the rest are convert-on-demand.
-- **Materialized data:** `sdi.v2.{power_lines,protected,water}` (GeoParquet, WKB `geom_wkb` + bbox) and the rasters `…/data/raster/{dem_2m,ndvi}.parquet` (raquet).
+## Step 1 — read what's out there
+Open **[`catalogs.md`](catalogs.md)** (the registry): the SDIs available and what each
+publisher holds. Today: three Finnish/European publishers, three Iceberg endpoints.
+Tell the user what you're about to federate.
 
-## How to answer (the live flow)
-1. **Parse** the question → a location (lon/lat — geocode the place name if needed) + intent (default: data-center siting feasibility).
-2. **Discover — out loud.** Search the catalog's STAC index and say what you found:
-   ```sql
-   SELECT id, collection, json_extract_string(properties,'$.materialized') AS materialized
-   FROM sdi.catalog.datasets WHERE properties ILIKE '%data-center%' ORDER BY materialized DESC;
-   ```
-   "The catalog has 130 datasets; these bear on siting a data center, and these are already cloud-native."
-3. **Analyse + report** — run the engine (it attaches the catalog, queries each
-   materialized dataset, and renders the HTML):
-   ```bash
-   python3 .claude/skills/sdi/sdi_report.py --lon <lon> --lat <lat> --name "<place>" --question "<their words>"
-   open demo/output/sdi_report.html
-   ```
+## Step 2 — parse the question
+→ a **location** (lon/lat — geocode the place name if needed) + **intent** (default:
+data-center siting feasibility). The canonical demo site is Espoo / Hepokorpi
+(`24.6883, 60.2371`) — a real, contested Microsoft data-center location.
 
-## What the analysis covers (all from the catalog, via DuckDB)
-- **Grid** — distance to nearest transmission line (`sdi.v2.power_lines`)
-- **Terrain** — flatness from the 2 m DEM raquet (elevation σ)
-- **Flood / water** — min elevation + distance to lakes (`sdi.v2.water`)
-- **Environment** — distance to protected areas (`sdi.v2.protected`) + vegetation/forest from NDVI raquet
+## Step 3 — connect (DuckDB + Iceberg), out loud
+```sql
+INSTALL iceberg; LOAD iceberg; INSTALL httpfs; LOAD httpfs;
+INSTALL spatial; LOAD spatial; INSTALL raquet FROM community; LOAD raquet;
+SET geometry_always_xy = true;
+ATTACH 'nls'  (TYPE iceberg, ENDPOINT '…/catalog/national-land-survey',          AUTHORIZATION_TYPE 'none');
+ATTACH 'syke' (TYPE iceberg, ENDPOINT '…/catalog/finnish-environment-institute', AUTHORIZATION_TYPE 'none');
+ATTACH 'cop'  (TYPE iceberg, ENDPOINT '…/catalog/copernicus',                    AUTHORIZATION_TYPE 'none');
+SHOW ALL TABLES;
+```
+> Use the DuckDB **CLI**: `duckdb -unsigned -json -c "<sql>"` (the raquet community
+> extension needs the CLI; `-unsigned` to load it). Endpoints are in `catalogs.md`.
 
-## Narrate while it runs
-- "It connects to a sovereign Iceberg catalog on European object storage — no server."
-- "It searches the STAC index, finds the datasets that bear on a data center, sees which are cloud-native, and queries them directly with DuckDB — GeoParquet for vectors, raquet for raster."
-- On the map: "Here's the answer — and none of it touched a US service: data on a Finnish cloud, queried by an open engine."
+## Step 4 — discover, progressively
+Search each publisher's STAC index for what bears on the question — narrate what you find:
+```sql
+SELECT id, collection, json_extract_string(properties,'$.materialized') AS materialized,
+       json_extract_string(assets,'$.data.href') AS data
+FROM nls.catalog.datasets
+WHERE properties ILIKE '%data-center%'
+ORDER BY materialized DESC;
+```
+> "NLS publishes 129 datasets; these bear on siting — power, water, protected areas,
+> elevation — and these are already cloud-native. Copernicus has Sentinel-2 NDVI. SYKE
+> has Natura 2000 and flood maps, catalogued and convertible on demand."
 
-## Honesty
-- This is an initial screen from open data at modest resolution — not a permit decision (the report says so).
-- The demo site (Espoo Hepokorpi) is a **real, contested** Microsoft data-center location; the data tends to confirm the real objections (forest/nature), which is the point — the agent surfaces the tension.
+## Step 5 — query (and join) the cloud-native data
+`materialized` datasets are queryable now. Example queries (substitute the site lon/lat):
+
+**Vector — nearest transmission line (m), GeoParquet via WKB, metric CRS:**
+```sql
+SELECT round(min(ST_Distance(
+  ST_Transform(ST_GeomFromWKB(geom_wkb),'EPSG:4326','EPSG:3067'),
+  ST_Transform(ST_Point(24.6883,60.2371),'EPSG:4326','EPSG:3067')))) AS metres
+FROM nls.v2.power_lines;
+```
+Repeat for `nls.v2.water` (cooling/flood context) and `nls.v2.protected` (nearest protected area).
+
+**Raster — elevation/slope from the 2 m DEM (raquet), sampled on a small grid:**
+```sql
+WITH grid AS (SELECT 24.6883+(i-3)*0.0009 lon, 60.2371+(j-3)*0.00045 lat
+              FROM range(0,7) a(i), range(0,7) b(j))
+SELECT min(elev) AS min_m, stddev(elev) AS slope_sigma FROM (
+  SELECT ST_RasterValue(r.block, r.band_1, ST_Point(g.lon,g.lat), r.metadata) elev
+  FROM grid g, read_raquet('…/data/raster/dem_2m.parquet') r
+  WHERE ST_Contains(ST_GeomFromQuadbin(r.block), ST_Point(g.lon,g.lat)));
+```
+
+**Raster — NDVI from Copernicus Sentinel-2 (band_2=NIR, band_1=Red):**
+```sql
+SELECT avg((b2-b1)/(b2+b1)) AS ndvi FROM (
+  SELECT ST_RasterValue(r.block,r.band_2,ST_Point(g.lon,g.lat),r.metadata) b2,
+         ST_RasterValue(r.block,r.band_1,ST_Point(g.lon,g.lat),r.metadata) b1
+  FROM grid g, read_raquet('…/data/raster/ndvi.parquet') r
+  WHERE ST_Contains(ST_GeomFromQuadbin(r.block),ST_Point(g.lon,g.lat)));
+```
+Geometry is just a column — you can **join across publishers** in one statement when a
+question needs it (e.g. site × NLS protected × a converted SYKE layer).
+
+## Step 6 — synthesize an HTML artifact
+Write a **self-contained HTML file** (open it for the user): the finding in plain
+language, a metrics panel where **every figure shows its publisher + dataset + the query
+that produced it**, and a MapLibre map with the queried features (pull nearby geometries
+with `ST_AsGeoJSON(ST_GeomFromWKB(geom_wkb))`). For a recent basemap/imagery you may use
+a Sentinel-2 tile via titiler. Keep provenance visible — it's the whole point.
+
+## Honest framing (do not regress — see the project's claim rules)
+- **Grid:** "favorable proximity, subject to capacity and permitting" — never "cheap/excellent grid".
+- **Flood:** flat/inland from the DEM → "no obvious topographic flood concern from the DEM; SYKE flood-hazard maps would sharpen this" — never "low flood risk".
+- **Water:** distance to a lake is cooling/context, not a permission.
+- **Sovereignty:** "European / sovereign infrastructure" — not "no data leaves the country".
+- Always: **initial spatial screening, not a permit decision.** Every number keeps its source + query.
+
+## Reference / web demo
+`sdi_report.py` is a **reference implementation** that runs this whole flow
+deterministically and renders the HTML — it's what precomputes the static web demo
+(`webapp/`). In a **live** session, prefer doing the steps above yourself so the
+discovery is real on camera.
