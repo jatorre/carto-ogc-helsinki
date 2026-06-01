@@ -255,6 +255,11 @@ def _example_query(mat):
     if kind == "ykr":  # YKR urban-structure zone class at the site (1 = most urban → higher = more peripheral)
         return ("SELECT Luokka AS urban_structure_class FROM read_parquet('"
                 f"{val}') WHERE ST_Contains(geom, ST_Point(:lon,:lat)) LIMIT 1;")
+    if kind == "climate":  # raster (raquet) point-sample of a climate variable, averaged over a small grid
+        return (_GRID + "SELECT round(avg(t),1) AS mean_annual_temp_c FROM ("
+                "SELECT ST_RasterValue(r.block,r.band_1,ST_Point(g.lon,g.lat),r.metadata) t "
+                f"FROM grid g, read_raquet('{val}') r "
+                "WHERE ST_Contains(ST_GeomFromQuadbin(r.block),ST_Point(g.lon,g.lat))) WHERE t > -9999;")
     if "ndvi" in val:  # raster (raquet) — NDVI = (NIR-Red)/(NIR+Red)
         return _GRID + ("SELECT avg((b2-b1)/(b2+b1)) AS ndvi FROM ("
                         "SELECT ST_RasterValue(r.block,r.band_2,ST_Point(g.lon,g.lat),r.metadata) b2,"
@@ -370,6 +375,11 @@ def collect_rows():
         "feature", AOI, "OGC:CRS84", ("ykr", f"{EXTRA}/lf_ykr.parquet", "geoparquet"),
         "YKR urban-structure zone class at the site (point-in-polygon)",
         "urban structure; settlement; land use; can-i-build-a-data-center")
+    add("temperature", "lf-climate", "Mean annual air temperature (climate grid)",
+        "Location Finland climate coverage: mean annual air temperature in °C — relevant to data-centre cooling / free-cooling potential. Materialized from the OGC API coverage (GeoTIFF) to cloud-native raquet via the DuckDB raquet extension.",
+        "coverage", AOI, "EPSG:3067", ("climate", f"{BASE_URI}/data/raster/cli_temperature.parquet", "raquet"),
+        "mean annual temperature (°C) at the site, sampled from the raquet raster",
+        "climate; temperature; cooling; free cooling; can-i-build-a-data-center")
     return R
 
 

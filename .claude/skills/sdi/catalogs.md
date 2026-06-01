@@ -75,13 +75,14 @@ context** at the site (postal-area population/income; people in the 1 km cell).
 
 ### 🧭 Location Finland (national Location Innovation Hub platform)
 Finland's national location-data gateway (OGC API; needs a free API key at source — already
-mirrored here, anonymous). **1 dataset, materialized**: `ykr_urban_structure` (YKR
-settlement/urban-structure zones) — places the site on the urban→peripheral gradient.
-Its source API also offers 3D buildings (CityJSON), climate coverages (temperature/wind —
-cooling relevance) and roads/rail — candidates for later (raster/3D pipeline needed).
+mirrored here, anonymous). **2 datasets, materialized**: `ykr_urban_structure` (YKR
+settlement/urban-structure zones — urban→peripheral gradient) and `temperature` (mean annual
+air temperature, °C — a **climate coverage** converted GeoTIFF→**raquet** and queried like the
+DEM/NDVI rasters; relevant to data-centre cooling). The source API also offers 3D buildings
+(CityJSON) and roads/rail — candidates for later.
 - **Attach as** `lf` · **endpoint** `https://8et4c.upcloudobjects.com/carto-ogc-connect-helsinki/catalog/location-finland`
 
-> A **combined** catalog also exists at `…/catalog` (all publishers, 140 datasets,
+> A **combined** catalog also exists at `…/catalog` (all publishers, 141 datasets,
 > vectors as `sdi.v2.*`) — the precomputed web demo uses it. For the **live agent demo,
 > prefer the three publisher endpoints above** — attaching them separately is the point:
 > a real federation of independent, sovereign sources.
