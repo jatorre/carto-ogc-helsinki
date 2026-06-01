@@ -11,12 +11,14 @@
     .reveal .slides section { padding: 0; }
     html, body, .reveal, .reveal-viewport { background: #000; }
     .reveal .slide-number { color:#fff; background:rgba(0,0,0,.35); }
-    /* live-demo button overlaid on the demo slides */
-    .demo-btn { position:absolute; left:50%; bottom:34px; transform:translateX(-50%);
-      z-index:40; font-family:'Inter',system-ui,Arial,sans-serif; font-weight:700; font-size:20px;
-      color:#07101F; background:#16E0C8; padding:12px 26px; border-radius:999px; text-decoration:none;
-      box-shadow:0 8px 28px rgba(0,0,0,.35); transition:transform .12s ease; }
-    .demo-btn:hover { transform:translateX(-50%) scale(1.05); }
+    /* live-demo button overlaid on the demo slides (overlay = full 1280x720 slide) */
+    .demo-overlay { position:absolute; left:0; top:0; width:1280px; height:720px;
+      display:flex; align-items:flex-end; justify-content:center; padding-bottom:40px;
+      box-sizing:border-box; pointer-events:none; z-index:40; }
+    .demo-btn { pointer-events:auto; font-family:'Inter',system-ui,Arial,sans-serif; font-weight:700;
+      font-size:22px; color:#07101F; background:#16E0C8; padding:13px 30px; border-radius:999px;
+      text-decoration:none; box-shadow:0 8px 28px rgba(0,0,0,.4); transition:transform .12s ease; }
+    .demo-btn:hover { transform:scale(1.05); }
   </style>
 </head>
 <body>
@@ -80,7 +82,7 @@
 
     <!-- 5 · LIVE DEMO — ASK FINLAND'S DATA ────────────────────── -->
     <section data-background-image="slides/img/05.png" data-background-size="contain" data-background-color="#0a0f1a">
-      <a class="demo-btn" href="webapp/index.html" target="_blank" rel="noopener">▶ Open the live demo</a>
+      <div class="demo-overlay"><a class="demo-btn" href="webapp/index.html" target="_blank" rel="noopener">▶ Open the live demo</a></div>
       <aside class="notes">
         SWITCH TO THE LIVE WEB APP (webapp/index.html → ask a question). The agent is connected to a federation of
         machine-readable spatial catalogs describing datasets, schemas, coverage, access methods, and where the
@@ -105,7 +107,7 @@
 
     <!-- 6 · PEOPLE EXPECT TO JUST ASK ─────────────────────────── -->
     <section data-background-image="slides/img/06.png" data-background-size="contain" data-background-color="#F6F4ED">
-      <a class="demo-btn" href="webapp/app.html" target="_blank" rel="noopener">▶ Open the live answer</a>
+      <div class="demo-overlay"><a class="demo-btn" href="webapp/app.html" target="_blank" rel="noopener">▶ Open the live answer</a></div>
       <aside class="notes">
         First big requirement: AI-readiness. People expect to just ask. That does NOT mean GIS expertise disappears
         — the opposite: it becomes even more important, but encoded into metadata, catalogs, standards, tools,
