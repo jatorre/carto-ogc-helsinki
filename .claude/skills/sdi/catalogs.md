@@ -41,12 +41,13 @@ land-cover context (NDVI). **1 dataset, materialized.**
 - **Attach as** `cop` · **endpoint** `https://8et4c.upcloudobjects.com/carto-ogc-connect-helsinki/catalog/copernicus`
 
 ### 🇫🇮 Finnish Environment Institute (SYKE)
-Authoritative environmental / regulatory layers: Natura 2000, flood-hazard maps, CORINE
-land cover. **3 datasets, catalogued (convert-on-demand)** — use them to sharpen an
-environmental or flood finding; narrate that they exist and are one conversion away.
+Authoritative environmental / regulatory layers. **4 datasets — 3 materialized**:
+flood-hazard zones (`tulvavaarakartta`, inundation extent by return period), Natura 2000
+(`natura2000`, SAC+SPA), and classified groundwater areas (`pohjavesialue`, VHS2022).
+CORINE land cover is still convert-on-demand. (Clipped to the Helsinki-region AOI.)
 - **Attach as** `syke` · **endpoint** `https://8et4c.upcloudobjects.com/carto-ogc-connect-helsinki/catalog/finnish-environment-institute`
 
-> A **combined** catalog also exists at `…/catalog` (all three publishers, 133 datasets,
+> A **combined** catalog also exists at `…/catalog` (all three publishers, 134 datasets,
 > vectors as `sdi.v2.*`) — the precomputed web demo uses it. For the **live agent demo,
 > prefer the three publisher endpoints above** — attaching them separately is the point:
 > a real federation of independent, sovereign sources.

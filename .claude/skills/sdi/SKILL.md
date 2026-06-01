@@ -50,7 +50,7 @@ CRS the dataset's metadata specifies (Finnish data → EPSG:3067).
 
 ## Honest framing — do NOT regress
 - **Grid:** "favorable proximity, subject to capacity and permitting" — never "cheap/excellent grid".
-- **Flood:** flat/inland from a DEM → "no obvious topographic flood concern from the DEM; authoritative flood-hazard maps (e.g. SYKE) would sharpen this" — never "low flood risk".
+- **Flood:** prefer SYKE's flood-hazard zones (`tulvavaarakartta`) when materialized — report distance to / inside a mapped zone (with return period). Only if no flood layer is available, infer cautiously from the DEM ("no obvious topographic flood concern from the DEM; authoritative flood-hazard maps would sharpen this"). Never "low flood risk" from elevation alone.
 - **Water:** distance to a lake is cooling/context, not a permission.
 - **Sovereignty:** "European / sovereign infrastructure" — not "no data leaves the country".
 - Always: this is an **initial spatial screening, not a permit decision.** Every number keeps its source + query.

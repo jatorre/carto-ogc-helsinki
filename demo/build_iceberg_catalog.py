@@ -29,6 +29,7 @@ from testbed._static_catalog import write_static_catalog  # noqa: E402
 BUCKET = "carto-ogc-connect-helsinki"
 PREFIX = "catalog"
 BASE_URI = f"https://8et4c.upcloudobjects.com/{BUCKET}/{PREFIX}"
+EXTRA = f"{BASE_URI}/data/extra"   # materialized cloud-native GeoParquet files (gpio output, native geom)
 IRC_PREFIX = "sdi"
 STAGING = Path("/tmp/sdi_catalog")
 SRC = Path("/tmp")
@@ -168,8 +169,15 @@ MATERIALIZED = {  # NLS id -> (v2 table base, format, recipe, keywords)
     "jarvi": ("water", "geoparquet",
                    "ST_Distance to lakes in EPSG:3067", "water/cooling/flood context; can-i-build-a-data-center"),
 }
-RELEVANT = {"rakennus": "buildings; residential proximity", "tieviiva": "roads; access",
+RELEVANT = {"tieviiva": "roads; access",
             "muuntaja": "transformer/substation; grid", "korkeuskayra": "contours; terrain"}
+
+# NLS datasets materialized as cloud-native GeoParquet FILES (not Iceberg tables): id -> (url, recipe, keywords)
+FILE_MATERIALIZED = {
+    "rakennus": (f"{EXTRA}/buildings.parquet",
+                 "nearest building distance (m): ST_Distance over geom in EPSG:3067",
+                 "buildings; residential proximity; can-i-build-a-data-center"),
+}
 
 # collection prefix -> publisher sub-catalog (who converted it)
 def publisher_of(collection):
@@ -198,11 +206,16 @@ def _example_query(mat):
     if not mat:
         return None
     kind, val, _fmt = mat
-    if kind == "table":  # vector (GeoParquet, WKB) — nearest distance in metric CRS
+    if kind == "table":  # Iceberg vector table (GeoParquet, WKB) — nearest distance in metric CRS
         return ("SELECT round(min(ST_Distance("
                 "ST_Transform(ST_GeomFromWKB(geom_wkb),'EPSG:4326','EPSG:3067'),"
                 "ST_Transform(ST_Point(:lon,:lat),'EPSG:4326','EPSG:3067')))) AS metres "
                 f"FROM <catalog>.v2.{val};")
+    if kind == "file":  # cloud-native GeoParquet file (native geom column) — read in place
+        return ("SELECT round(min(ST_Distance("
+                "ST_Transform(geom,'EPSG:4326','EPSG:3067'),"
+                "ST_Transform(ST_Point(:lon,:lat),'EPSG:4326','EPSG:3067')))) AS metres "
+                f"FROM read_parquet('{val}');")
     if "ndvi" in val:  # raster (raquet) — NDVI = (NIR-Red)/(NIR+Red)
         return _GRID + ("SELECT avg((b2-b1)/(b2+b1)) AS ndvi FROM ("
                         "SELECT ST_RasterValue(r.block,r.band_2,ST_Point(g.lon,g.lat),r.metadata) b2,"
@@ -241,10 +254,15 @@ def collect_rows():
     for c in cols:
         sp = (((c.get("extent") or {}).get("spatial") or {}).get("bbox") or [None])
         bbox = sp[0] if (sp and isinstance(sp[0], list)) else None
-        m = MATERIALIZED.get(c["id"])
+        m = MATERIALIZED.get(c["id"]); fm = FILE_MATERIALIZED.get(c["id"])
+        if m:
+            mat, recipe, kw = ("table", m[0], m[1]), m[2], m[3]
+        elif fm:
+            mat, recipe, kw = ("file", fm[0], "geoparquet"), fm[1], fm[2]
+        else:
+            mat, recipe, kw = None, None, RELEVANT.get(c["id"], "")
         add(c["id"], "nls-topographic", c.get("title"), c.get("description"), c.get("itemType"),
-            bbox, "OGC:CRS84", (("table", m[0], m[1]) if m else None), (m[2] if m else None),
-            m[3] if m else RELEVANT.get(c["id"], ""))
+            bbox, "OGC:CRS84", mat, recipe, kw)
     add("korkeusmalli_2m", "nls-elevation", "Elevation model 2 m (laser DEM)",
         "NLS 2 m laser-scanned elevation model — flatness + flood for data-center siting.", "coverage",
         [24.62, 60.21, 24.76, 60.27], "EPSG:3067",
@@ -257,16 +275,26 @@ def collect_rows():
         ("url", f"{BASE_URI}/data/raster/ndvi.parquet", "raquet"),
         "read_raquet; NDVI=(band_2-band_1)/(band_2+band_1)",
         "vegetation; forest clearing; land cover; can-i-build-a-data-center")
-    # SYKE — Finnish Environment Institute: real publisher, datasets CATALOGUED (convert-on-demand)
-    FIN = [19.0, 59.5, 31.6, 70.1]
-    add("natura2000", "syke", "Natura 2000 protected areas",
-        "EU Natura 2000 network sites in Finland, published by SYKE.", "feature", FIN, "OGC:CRS84", None, None,
-        "environmental constraint; protected; can-i-build-a-data-center")
-    add("tulvavaarakartta", "syke", "Flood hazard maps",
-        "Flood risk / hazard zones, published by SYKE.", "feature", FIN, "OGC:CRS84", None, None,
-        "flood risk; can-i-build-a-data-center")
+    # SYKE — Finnish Environment Institute. Flood + Natura + groundwater MATERIALIZED
+    # (clipped to the Helsinki-region AOI from SYKE's OGC API Features); CORINE still convert-on-demand.
+    AOI = [24.15, 60.08, 24.80, 60.40]
+    add("tulvavaarakartta", "syke", "Flood hazard zones (basic scenarios)",
+        "SYKE flood-hazard inundation zones by return period (tulvavaaravyöhykkeet, perusskenaariot), clipped to the Helsinki-region AOI.",
+        "feature", AOI, "OGC:CRS84", ("file", f"{EXTRA}/flood_hazard.parquet", "geoparquet"),
+        "nearest flood-hazard zone (m): ST_Distance over geom in EPSG:3067 (attribute tulvasuojtoistuvuus = return period, yr)",
+        "flood risk; flood hazard; can-i-build-a-data-center")
+    add("natura2000", "syke", "Natura 2000 protected areas (SAC + SPA)",
+        "EU Natura 2000 network — habitats (SAC) + birds (SPA) directive sites in the AOI, published by SYKE.",
+        "feature", AOI, "OGC:CRS84", ("file", f"{EXTRA}/natura2000.parquet", "geoparquet"),
+        "nearest Natura 2000 site (m): ST_Distance over geom in EPSG:3067",
+        "environmental constraint; protected; natura; can-i-build-a-data-center")
+    add("pohjavesialue", "syke", "Groundwater areas (classified, VHS2022)",
+        "SYKE classified groundwater areas (pohjavesialueet, VHS2022) — water-supply abstraction & contamination constraint for siting.",
+        "feature", AOI, "OGC:CRS84", ("file", f"{EXTRA}/groundwater.parquet", "geoparquet"),
+        "distance to / inside a classified groundwater area (m): ST_Distance over geom in EPSG:3067",
+        "groundwater; cooling water; permitting constraint; can-i-build-a-data-center")
     add("corine-land-cover", "syke", "CORINE Land Cover 2018",
-        "Pan-European CORINE land cover for Finland, published by SYKE.", "coverage", FIN, "OGC:CRS84", None, None,
+        "Pan-European CORINE land cover for Finland, published by SYKE.", "coverage", AOI, "OGC:CRS84", None, None,
         "land cover; vegetation; can-i-build-a-data-center")
     return R
 
