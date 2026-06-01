@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>The Next SDI — CARTO @ OGC Connect Helsinki</title>
+  <link rel="stylesheet" href="vendor/reveal-dist/reset.css">
+  <link rel="stylesheet" href="vendor/reveal-dist/reveal.css">
+  <style>
+    /* image-slide deck: each slide is a full-bleed 16:9 screenshot */
+    .reveal .slides section { padding: 0; }
+    html, body, .reveal, .reveal-viewport { background: #000; }
+    .reveal .slide-number { color:#fff; background:rgba(0,0,0,.35); }
+    /* live-demo button overlaid on the demo slides */
+    .demo-btn { position:absolute; left:50%; bottom:34px; transform:translateX(-50%);
+      z-index:40; font-family:'Inter',system-ui,Arial,sans-serif; font-weight:700; font-size:20px;
+      color:#07101F; background:#16E0C8; padding:12px 26px; border-radius:999px; text-decoration:none;
+      box-shadow:0 8px 28px rgba(0,0,0,.35); transition:transform .12s ease; }
+    .demo-btn:hover { transform:translateX(-50%) scale(1.05); }
+  </style>
+</head>
+<body>
+<div class="reveal">
+  <div class="slides">
+
+    <!-- 1 · TITLE ─────────────────────────────────────────────── -->
+    <section data-background-image="slides/img/01.png" data-background-size="contain" data-background-color="#1E2BF5">
+      <aside class="notes">
+        Hi, I'm Javier de la Torre, founder of CARTO. Excited to be here at OGC Connect. I don't need to tell this
+        audience how big the AI transformation is — every software category is being redefined by the ability to
+        ask in natural language and get answers. And I don't need to tell an audience in Finland about the
+        geopolitical moment: data control, resilience, sovereignty are strategic requirements now. Today I want to
+        connect those two forces — AI and sovereignty — to SDIs. Main message: SDIs are becoming more relevant than
+        ever, but their requirements are changing. Historically SDIs served geospatial experts; in the AI era they
+        must also serve agents — and those agents answer questions directly for citizens, planners, ministries,
+        companies, governments. That de-intermediation makes SDIs more important — but it means a new architecture.
+      </aside>
+    </section>
+
+    <!-- 2 · CARTO — CUSTOMER WALL ─────────────────────────────── -->
+    <section data-background-image="slides/img/02.png" data-background-size="contain" data-background-color="#F6F4ED">
+      <aside class="notes">
+        One quick word about CARTO. Born in Spain; today we work with leading enterprises, cities and public-sector
+        organizations worldwide. Our focus: make geospatial more accessible, scalable and connected to the broader
+        analytics ecosystem — moving organizations from traditional GIS into cloud-native spatial analytics. That's
+        why we care about the future of SDIs, interoperability, sovereignty and AI. Geospatial is about to go
+        through another interface shift. Think about maps: agencies had valuable authoritative data, but maps became
+        part of everyday life when the interface changed — when anyone could use them instantly. The same is about
+        to happen with SDIs: not only a portal for experts, but trusted infrastructure for agents that serve everyone.
+      </aside>
+    </section>
+
+    <!-- 3 · THE NEED TO MODERNIZE SDIs ────────────────────────── -->
+    <section data-background-image="slides/img/03.png" data-background-size="contain" data-background-color="#F6F4ED">
+      <aside class="notes">
+        For twenty years the SDI promise was discoverable, accessible, interoperable spatial data. Right vision —
+        but the context changed. ① AI-ready: users aren't satisfied with portals, layers and endpoints; they expect
+        to ask and get answers. ② Cheap and fast: agents query far more data than humans ever did; a heavy WFS or
+        custom GIS service per request breaks the cost/performance model. ③ Interoperable with the rest of the
+        analytics world: geospatial data is data — SQL, lakes, AI, cloud-native formats. ④ Sovereign: data, compute,
+        AI and the GIS platform itself must be controlled, auditable, deployable under the org's rules. So the next
+        SDI has four requirements: AI-ready, cheap and fast, interoperable, sovereign. Let me make it real.
+      </aside>
+    </section>
+
+    <!-- 4 · DATA CENTERS — CAN AN SDI ANSWER? ─────────────────── -->
+    <section data-background-image="slides/img/04.png" data-background-size="contain" data-background-color="#F6F4ED">
+      <aside class="notes">
+        AI isn't only changing software — it's creating massive physical infrastructure needs. Data centers need
+        land, power, cooling, connectivity; they affect communities, raise environmental questions, become national
+        digital infrastructure. Imagine a citizen or public-sector analyst in the Helsinki region reading about new
+        data-center projects. They want to understand one contested site — without five geoportals, without knowing
+        the dataset names or which catalog belongs to which publisher. They just want to ask: what's actually there?
+        Close to power? Forest? Close to water? Protected? Environmental concerns? What evidence supports the answer?
+        For the demo we federate three trusted sources: National Land Survey of Finland (infrastructure & physical
+        context), SYKE (environmental datasets), Copernicus (Sentinel-2). The point isn't a giant new portal — it's
+        that these sources are exposed as machine-readable catalogs an agent can use. Now let's ask the SDI.
+      </aside>
+    </section>
+
+    <!-- 5 · LIVE DEMO — ASK FINLAND'S DATA ────────────────────── -->
+    <section data-background-image="slides/img/05.png" data-background-size="contain" data-background-color="#0a0f1a">
+      <a class="demo-btn" href="webapp/index.html" target="_blank" rel="noopener">▶ Open the live demo</a>
+      <aside class="notes">
+        SWITCH TO THE LIVE WEB APP (webapp/index.html → ask a question). The agent is connected to a federation of
+        machine-readable spatial catalogs describing datasets, schemas, coverage, access methods, and where the
+        cloud-native data lives. Ask: "I've been reading about proposed data centers in the Helsinki region.
+        Investigate one contested site and assess the infrastructure and environmental context — use trusted Finnish
+        and European open-data catalogues. Show me the datasets, queries, map, sources, and uncertainties."
+        Flow: plan → search public reporting → three contested sites (Espoo/Hepokorpi, Kirkkonummi/Kolabacken,
+        Vihti/Nummela) → choose Espoo → connect to the three publishers → discover datasets (NLS: sahkolinja,
+        korkeusmalli_2m, jarvi, luonnonsuojelualue · Copernicus: Sentinel-2 NDVI · SYKE: Natura 2000, flood maps,
+        CORINE — catalogued, convert-on-demand) → query.
+        Honest results: transmission line ~64 m (favorable proximity — NOT capacity; depends on capacity &
+        permitting). Elevation ~35.2 m, gentle slope, inland (no obvious topographic flood concern from the DEM;
+        SYKE flood maps would sharpen it). Nearest lake ~931 m (cooling context, not a permission). NDVI ~0.66 —
+        vegetated/forest: the catch. Nearest protected area ~830 m, no direct overlap (scopes review). Assessment:
+        favorable infrastructure & terrain, but clears forest/green land at a residential edge — the core local
+        objection, needs environmental review. Initial spatial screening, NOT a permitting decision. Every figure
+        links to a publisher, dataset and query. THE POINT: no geoportal, no dataset names, no downloads, no manual
+        joins. The catalog became a machine-readable contract for an agent. In the AI era, provenance is part of the
+        answer.
+      </aside>
+    </section>
+
+    <!-- 6 · PEOPLE EXPECT TO JUST ASK ─────────────────────────── -->
+    <section data-background-image="slides/img/06.png" data-background-size="contain" data-background-color="#F6F4ED">
+      <a class="demo-btn" href="webapp/app.html" target="_blank" rel="noopener">▶ Open the live answer</a>
+      <aside class="notes">
+        First big requirement: AI-readiness. People expect to just ask. That does NOT mean GIS expertise disappears
+        — the opposite: it becomes even more important, but encoded into metadata, catalogs, standards, tools,
+        workflows and governance. For years SDIs served experts who knew which portal, which dataset, how to read
+        the metadata, how to join layers. AI changes the interface: the next SDI serves agents, and agents answer
+        questions directly for final users. Same shift as maps going from specialist-managed to something everyone
+        uses daily — authoritative data stayed important, the interface changed. SDIs aren't less relevant; they're
+        much more relevant — but the primary consumer becomes an agent. If agents answer questions about planning,
+        climate, infrastructure, mobility, risk and environment, they need trusted SDIs underneath — machine-readable
+        catalogs, metadata, provenance and standards matter more than ever. The future SDI is trusted infrastructure
+        for agents that serve everyone.
+      </aside>
+    </section>
+
+    <!-- 7 · PURE STORAGE — NO LIVE SERVERS ────────────────────── -->
+    <section data-background-image="slides/img/07.png" data-background-size="contain" data-background-color="#F6F4ED">
+      <aside class="notes">
+        Second requirement: cheap and fast. Agents query far more data than humans ever did; a server-side GIS
+        service per interaction gets expensive fast. Old model: database → server → service → portal → tile caches →
+        computation inside the SDI. New model is much simpler: object storage + CDN, cloud-native files, compute
+        pushed to the analytical engine. With GeoParquet, Apache Iceberg, PMTiles, COG and cloud-native rasters the
+        cost of serving the next SDI drops dramatically — not a custom API per dataset, not a GIS server per
+        operation. APIs don't disappear — they stay critical for discovery, governance, access control,
+        interoperability — but for large-scale analytical access, cloud-native files change the cost model. Here the
+        data layer is hosted in Finland on UpCloud — the same architecture that makes SDIs cheaper makes them more
+        sovereign.
+      </aside>
+    </section>
+
+    <!-- 8 · GEOSPATIAL DATA IS DATA ───────────────────────────── -->
+    <section data-background-image="slides/img/08.png" data-background-size="contain" data-background-color="#F6F4ED">
+      <aside class="notes">
+        Third requirement: interoperability — and I'll be direct: we need to break the GIS data silo. Geospatial
+        data is data. It should live where the rest of analytics happens — usable from SQL engines, lakes, notebooks,
+        AI agents, warehouses and GIS platforms — using formats the broader data industry already understands:
+        GeoParquet, Apache Iceberg, columnar cloud-native files, SQL, DuckDB, BigQuery, Snowflake, Databricks. NOT
+        about abandoning OGC — about making OGC and geospatial interoperability converge with the broader analytics
+        ecosystem. OGC APIs remain essential for discovery, access, governance and machine-actionable interfaces; but
+        the data itself must be computable by the modern stack. That's how we expand who can use spatial data. The
+        next OGC client isn't only a desktop GIS or web map — it's an AI agent, and that agent needs standards,
+        metadata, semantics, quality and trusted access.
+      </aside>
+    </section>
+
+    <!-- 9 · EVERYTHING RUNS ON EU INFRASTRUCTURE ──────────────── -->
+    <section data-background-image="slides/img/09.png" data-background-size="contain" data-background-color="#F6F4ED">
+      <aside class="notes">
+        Fourth requirement: sovereignty. Everything you saw runs on European infrastructure. Storage — UpCloud,
+        hosted in Finland. Data — open cloud-native formats. Compute — DuckDB, an open engine. AI — Mistral, a
+        European model, or self-hosted. GIS platform — CARTO, working toward SEAL-4-level sovereignty. Sovereignty in
+        the AI era isn't just where data is stored — it's which model sees it, which engine processes it, which cloud
+        hosts it, who controls the platform, can I audit it, move it, interoperate without giving up control. It's
+        not about walls — it's controlling your infrastructure while staying interoperable. And it matters more in
+        the AI era: whoever controls the agent controls the interface to the data, and whoever controls the interface
+        increasingly controls the inference. Sovereign geospatial infrastructure is the whole stack: data, catalogs,
+        compute, AI, GIS platform, governance.
+        (Note: "not subject to the US CLOUD Act" is a strong legal claim — confirm with legal before the talk.)
+      </aside>
+    </section>
+
+    <!-- 10 · CARTO — YOUR PARTNER ─────────────────────────────── -->
+    <section data-background-image="slides/img/10.png" data-background-size="contain" data-background-color="#1E2BF5">
+      <aside class="notes">
+        This is where CARTO comes in — and as sponsors, let me be direct. Public-sector GIS is in a
+        once-in-a-generation transition. The old model: portals, specialist users, proprietary workflows, expensive
+        infrastructure. The new model must be cheaper, AI-ready, interoperable with the modern data stack, and
+        sovereign by design. That's what CARTO is building — the GIS platform for the AI era: spatial data
+        discovered by agents, queried directly from cloud-native formats, OGC APIs and open standards for
+        discovery/governance/interoperability, modern engines for analysis, CARTO to visualize, analyze, govern and
+        operationalize. Sovereignty is central: working toward SEAL-4-level sovereignty. The ambition: your data,
+        your cloud, your AI, your engine, your GIS platform, your governance. If you're modernizing your SDI,
+        geoportal or public-sector mapping platform, we'd love to work with you. The SDI vision was right. The
+        interface has changed. The next interface is an agent. Thank you.
+        — SHORT VERSION: SDIs were built for experts; now they must serve agents; agents serve everyone. That makes
+        SDIs more important, not less — but they must become AI-ready, cheap & fast, interoperable, and sovereign by
+        design. CARTO is here to help.
+      </aside>
+    </section>
+
+  </div>
+</div>
+
+<script type="module">
+  import Reveal from './vendor/reveal-dist/reveal.esm.js';
+  import Notes from './vendor/reveal-plugin/notes/notes.esm.js';
+  const deck = new Reveal({
+    hash: true,
+    slideNumber: 'c/t',
+    transition: 'fade',
+    transitionSpeed: 'fast',
+    controls: false,
+    progress: true,
+    center: true,
+    width: 1280, height: 720, margin: 0,
+    plugins: [Notes],
+  });
+  deck.initialize();
+</script>
+</body>
+</html>

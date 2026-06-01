@@ -1,0 +1,18 @@
+# OS / editor
+.DS_Store
+node_modules/
+*.log
+
+# raw screenshot sources (the cropped 16:9 frames in slides/img/ ARE committed)
+slides_screenshots/
+
+# generated demo output
+demo/output/
+
+# local secrets / credentials (never commit)
+*.env
+.env*
+*apikey*
+*credentials*
+*.secret
+__pycache__/
