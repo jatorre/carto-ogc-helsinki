@@ -193,6 +193,10 @@ def publisher_of(collection):
         return "fingrid"
     if collection.startswith("lf"):
         return "location-finland"
+    if collection.startswith("overture"):
+        return "overture-maps"
+    if collection.startswith("eurostat"):
+        return "eurostat"
     return "copernicus"
 
 # publisher -> (endpoint sub-path, idx storage slug). The combined catalog is at the root.
@@ -204,6 +208,8 @@ PUBLISHERS = {
     "statistics-finland":            ("statistics-finland", "statfi"),
     "fingrid":                       ("fingrid", "fingrid"),
     "location-finland":              ("location-finland", "lf"),
+    "overture-maps":                 ("overture-maps", "overture"),
+    "eurostat":                      ("eurostat", "eurostat"),
 }
 
 
@@ -260,6 +266,13 @@ def _example_query(mat):
                 "SELECT ST_RasterValue(r.block,r.band_1,ST_Point(g.lon,g.lat),r.metadata) t "
                 f"FROM grid g, read_raquet('{val}') r "
                 "WHERE ST_Contains(ST_GeomFromQuadbin(r.block),ST_Point(g.lon,g.lat))) WHERE t > -9999;")
+    if kind == "poicount":  # global POI density near the site (count within 1 km)
+        return ("SELECT count(*) AS places_within_1km FROM read_parquet('"
+                f"{val}') WHERE ST_DWithin(ST_Transform(geom,'EPSG:4326','EPSG:3067'),"
+                "ST_Transform(ST_Point(:lon,:lat),'EPSG:4326','EPSG:3067'), 1000);")
+    if kind == "prices":  # NON-spatial: country price comparison
+        return ("SELECT country, price_eur_per_kwh, period FROM read_parquet('"
+                f"{val}') ORDER BY price_eur_per_kwh;")
     if "ndvi" in val:  # raster (raquet) — NDVI = (NIR-Red)/(NIR+Red)
         return _GRID + ("SELECT avg((b2-b1)/(b2+b1)) AS ndvi FROM ("
                         "SELECT ST_RasterValue(r.block,r.band_2,ST_Point(g.lon,g.lat),r.metadata) b2,"
@@ -380,6 +393,18 @@ def collect_rows():
         "coverage", AOI, "EPSG:3067", ("climate", f"{BASE_URI}/data/raster/cli_temperature.parquet", "raquet"),
         "mean annual temperature (°C) at the site, sampled from the raquet raster",
         "climate; temperature; cooling; free cooling; can-i-build-a-data-center")
+    # Overture Maps (GLOBAL) — the same DuckDB-over-GeoParquet pattern, at planet scale.
+    add("places", "overture-places", "Points of interest (Overture Maps, global)",
+        "Overture Maps global places — a slice of the planet-scale, cloud-native GeoParquet catalog (released on object storage, queried with DuckDB exactly like everything else here). POI density / activity around the site.",
+        "feature", [24.15, 60.08, 24.80, 60.40], "OGC:CRS84", ("poicount", f"{EXTRA}/overture_places.parquet", "geoparquet"),
+        "number of Overture places within 1 km of the site",
+        "points of interest; activity; global; can-i-build-a-data-center")
+    # Eurostat (EUROPEAN) — NON-spatial: EU-wide electricity prices, the data-centre cost driver.
+    add("electricity_prices", "eurostat-energy", "Electricity prices, industrial (Eurostat)",
+        "Eurostat electricity prices for industrial consumers (band 2000–20000 MWh/yr, incl. taxes, €/kWh): Finland vs the EU-27 average — the cost driver behind data-centre siting. Non-spatial.",
+        "table", None, None, ("prices", f"{EXTRA}/eurostat_elec.parquet", "parquet"),
+        "Finland vs EU-27 industrial electricity price (EUR/kWh)",
+        "electricity price; energy cost; non-spatial; european; can-i-build-a-data-center")
     return R
 
 

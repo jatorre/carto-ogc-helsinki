@@ -5,9 +5,9 @@
 > **attach it and read its own STAC index** (`catalog.datasets`); each dataset carries its
 > own metadata, including a runnable `example_query`. That's the progressive discovery:
 > registry → catalog → dataset → query. Adding a source = a new endpoint + an entry here;
-> the skill doesn't change. Today there are **seven** (the Portolan Helsinki demo) spanning
-> EU, national, regional and platform tiers — and one is **non-geospatial**, to show the SDI
-> federates open data, not just maps. Some need a free API key. There will be many more.
+> the skill doesn't change. Today there are **nine** (the Portolan Helsinki demo) spanning
+> every tier — **regional → national → EU → global** — and two are **non-geospatial**, to show
+> the SDI federates open data, not just maps. Some need a free API key. There will be many more.
 
 ## How catalogs work (applies to all of them)
 Each is an **Apache Iceberg** catalog on object storage (UpCloud, European / sovereign
@@ -82,7 +82,20 @@ DEM/NDVI rasters; relevant to data-centre cooling). The source API also offers 3
 (CityJSON) and roads/rail — candidates for later.
 - **Attach as** `lf` · **endpoint** `https://8et4c.upcloudobjects.com/carto-ogc-connect-helsinki/catalog/location-finland`
 
-> A **combined** catalog also exists at `…/catalog` (all publishers, 141 datasets,
+### 🇪🇺 Eurostat (EU statistical office) — NON-geospatial
+**1 dataset, materialized**: `electricity_prices` — industrial electricity price (€/kWh, incl.
+taxes), **Finland vs EU-27**. No geometry — the cost driver behind data-centre siting
+(Finland ≈ €0.085/kWh vs EU-27 ≈ €0.19). `example_query` is a non-spatial comparison.
+- **Attach as** `eurostat` · **endpoint** `https://8et4c.upcloudobjects.com/carto-ogc-connect-helsinki/catalog/eurostat`
+
+### 🌍 Overture Maps (global)
+**1 dataset, materialized**: `places` — points of interest from Overture's **planet-scale,
+cloud-native GeoParquet** catalog (we federated a slice into the bucket; the source is queried
+with DuckDB *exactly* like everything else here — the same pattern, at global scale). POI
+density / activity near the site.
+- **Attach as** `overture` · **endpoint** `https://8et4c.upcloudobjects.com/carto-ogc-connect-helsinki/catalog/overture-maps`
+
+> A **combined** catalog also exists at `…/catalog` (all publishers, 143 datasets,
 > vectors as `sdi.v2.*`) — the precomputed web demo uses it. For the **live agent demo,
 > prefer the three publisher endpoints above** — attaching them separately is the point:
 > a real federation of independent, sovereign sources.
