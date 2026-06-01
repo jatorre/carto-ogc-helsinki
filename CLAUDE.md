@@ -40,8 +40,7 @@ webapp reuses.
 ## Claim framing — IMPORTANT, do not regress
 The deck and demo deliberately avoid overclaiming. When editing any user-facing copy:
 - **Sovereignty:** say "European / sovereign infrastructure", not "no data leaves the
-  country" (Copernicus + the AI model are EU, not in-country). "Not subject to the US CLOUD
-  Act" is a strong legal claim — flag for legal review.
+  country" (Copernicus + the AI model are EU, not in-country).
 - **Grid:** distance to a power line is "favorable proximity, subject to capacity and
   permitting" — never "cheap/excellent grid connection".
 - **Flood:** elevation/slope alone gives "no obvious topographic flood concern from the DEM;

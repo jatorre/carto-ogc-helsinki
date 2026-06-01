@@ -56,7 +56,6 @@ Everything runs on European infrastructure.
 ## Accuracy notes
 - **SEAL** = the EU Cloud Sovereignty Framework's *Sovereignty Effectiveness Assurance
   Levels*. **SEAL-4** is a high bar (EU control end to end). Frame CARTO's position as
-  *working toward* SEAL-4-level sovereignty, not an achieved certification — and confirm
-  any "not subject to the US CLOUD Act" wording with legal before presenting.
+  *working toward* SEAL-4-level sovereignty, not an achieved certification.
 - Sovereignty here means **European / sovereign infrastructure**, not a claim that no
   byte ever leaves the country (Copernicus and the AI model are EU, not in-country).
