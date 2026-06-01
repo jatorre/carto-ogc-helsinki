@@ -191,6 +191,8 @@ def publisher_of(collection):
         return "statistics-finland"
     if collection.startswith("fingrid"):
         return "fingrid"
+    if collection.startswith("lf"):
+        return "location-finland"
     return "copernicus"
 
 # publisher -> (endpoint sub-path, idx storage slug). The combined catalog is at the root.
@@ -201,6 +203,7 @@ PUBLISHERS = {
     "helsinki-region-hsy":           ("helsinki-region-hsy", "hsy"),
     "statistics-finland":            ("statistics-finland", "statfi"),
     "fingrid":                       ("fingrid", "fingrid"),
+    "location-finland":              ("location-finland", "lf"),
 }
 
 
@@ -249,6 +252,9 @@ def _example_query(mat):
     if kind == "popgrid":  # 1 km population-grid cell at the site
         return ("SELECT vaesto AS population_1km_cell, ika_0_14, ika_15_64, ika_65_ "
                 f"FROM read_parquet('{val}') WHERE ST_Contains(geom, ST_Point(:lon,:lat)) LIMIT 1;")
+    if kind == "ykr":  # YKR urban-structure zone class at the site (1 = most urban → higher = more peripheral)
+        return ("SELECT Luokka AS urban_structure_class FROM read_parquet('"
+                f"{val}') WHERE ST_Contains(geom, ST_Point(:lon,:lat)) LIMIT 1;")
     if "ndvi" in val:  # raster (raquet) — NDVI = (NIR-Red)/(NIR+Red)
         return _GRID + ("SELECT avg((b2-b1)/(b2+b1)) AS ndvi FROM ("
                         "SELECT ST_RasterValue(r.block,r.band_2,ST_Point(g.lon,g.lat),r.metadata) b2,"
@@ -358,6 +364,12 @@ def collect_rows():
         "feature", AOI, "OGC:CRS84", ("popgrid", f"{EXTRA}/statfi_popgrid.parquet", "geoparquet"),
         "population in the 1 km cell at the site (with age groups)",
         "population; density; residential; statistics; can-i-build-a-data-center")
+    # Location Finland (national Location Innovation Hub platform, API-key gateway) — urban structure
+    add("ykr_urban_structure", "lf-ykr", "Urban structure zones (YKR)",
+        "Location Finland (national geospatial platform): YKR settlement/urban-structure zone classification — places the site on the urban→peripheral gradient (1 = inner urban; higher = more peripheral / rural).",
+        "feature", AOI, "OGC:CRS84", ("ykr", f"{EXTRA}/lf_ykr.parquet", "geoparquet"),
+        "YKR urban-structure zone class at the site (point-in-polygon)",
+        "urban structure; settlement; land use; can-i-build-a-data-center")
     return R
 
 
