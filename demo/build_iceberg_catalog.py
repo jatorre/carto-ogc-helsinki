@@ -58,6 +58,51 @@ DATASETS = {
 }
 COLS = ["id", "kohderyhma", "kohdeluokka", "fp_xmin", "fp_ymin", "fp_xmax", "fp_ymax", "geom_wkb"]
 
+# Per-column documentation, written into the Iceberg schema field `doc` (the standard,
+# self-describing place for column metadata — readable by any Iceberg client via loadTable).
+VEC_DOC = {
+ "id": "Source feature identifier (NLS mtk_id).",
+ "kohderyhma": "NLS feature-group code (kohderyhmä).",
+ "kohdeluokka": "NLS feature-class code (kohdeluokka).",
+ "fp_xmin": "Feature bounding-box minimum longitude, WGS84 (used for spatial pruning).",
+ "fp_ymin": "Feature bounding-box minimum latitude, WGS84 (used for spatial pruning).",
+ "fp_xmax": "Feature bounding-box maximum longitude, WGS84 (used for spatial pruning).",
+ "fp_ymax": "Feature bounding-box maximum latitude, WGS84 (used for spatial pruning).",
+ "geom_wkb": "Geometry — WKB encoding, CRS OGC:CRS84 (EPSG:4326).",
+ "geom": "Geometry — native geoarrow encoding, CRS OGC:CRS84 (EPSG:4326).",
+}
+IDX_DOC = {
+ "id": "STAC item id (the dataset identifier).",
+ "collection": "STAC collection — the publisher / theme grouping.",
+ "geometry": "Dataset spatial footprint, WKB (OGC:CRS84).",
+ "bbox": "Dataset bounding box (WGS84).",
+ "xmin": "Bounding-box minimum longitude (WGS84).", "ymin": "Bounding-box minimum latitude (WGS84).",
+ "xmax": "Bounding-box maximum longitude (WGS84).", "ymax": "Bounding-box maximum latitude (WGS84).",
+ "datetime": "STAC item datetime (null if the dataset has no single timestamp).",
+ "properties": "STAC properties (JSON): title, description, keywords, crs, materialized, provider, license, OSI semantics, and query_hint where the access pattern is non-obvious.",
+ "assets": "STAC assets (JSON): data href (an Iceberg table reference or a cloud-native file URL) and type.",
+ "stac_version": "STAC specification version.",
+ "type": "STAC item type (Feature).",
+}
+def _annotate(meta, docs):
+    """Write per-column `doc` into an Iceberg table-metadata dict, by field name (incl. nested struct fields)."""
+    def walk(fields):
+        for fld in fields:
+            if fld.get("name") in docs:
+                fld["doc"] = docs[fld["name"]]
+            t = fld.get("type")
+            if isinstance(t, dict) and t.get("type") == "struct":
+                walk(t.get("fields", []))
+    for sc in meta.get("schemas", []):
+        walk(sc.get("fields", []))
+    return meta
+def _finalize(mp, docs):
+    """Annotate the table metadata with per-column docs AND write it back to the staged
+    metadata.json so the published file (not just the inline IRC surface) carries them."""
+    meta = _annotate(json.loads(Path(mp).read_text()), docs)
+    Path(mp).write_text(json.dumps(meta))
+    return meta
+
 
 def _ext(t):
     return (pc.min(t["fp_xmin"]).as_py(), pc.min(t["fp_ymin"]).as_py(),
@@ -115,7 +160,7 @@ def build_v2(name, info):
                               name_mapping=namemap, data_files=df, format_version_in_metadata=2,
                               location_uri=f"{BASE_URI}/data/v2/{name}",
                               extra_properties={"geo": json.dumps(geo), **_props(info, "v2")})
-    return json.loads(Path(mp).read_text())
+    return _finalize(mp, VEC_DOC)
 
 
 def build_v3(name, info):
@@ -150,7 +195,7 @@ def build_v3(name, info):
     mp = write_static_catalog(table_root=root, iceberg_schema=ice, schema_json_fields=fields,
                               name_mapping=namemap, data_files=df, format_version_in_metadata=3,
                               location_uri=f"{BASE_URI}/data/v3/{name}", extra_properties=_props(info, "v3"))
-    return json.loads(Path(mp).read_text())
+    return _finalize(mp, VEC_DOC)
 
 
 # --- catalog.datasets : stac-geoparquet (STAC Items in Iceberg) -------------
@@ -531,7 +576,7 @@ def write_index(R, idxs, storage_key, scope, title):
                               "size": pqpath.stat().st_size, "rows": tbl.num_rows, "lower": {}, "upper": {}}],
                               format_version_in_metadata=2, location_uri=f"{BASE_URI}/data/{storage_key}",
                               extra_properties=props, last_column_id_override=13)
-    return json.loads(Path(mp).read_text()), tbl.num_rows
+    return _finalize(mp, IDX_DOC), tbl.num_rows
 
 
 # --- IRC surface ------------------------------------------------------------
