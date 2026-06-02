@@ -285,6 +285,28 @@ def _example_query(mat):
                     "WHERE ST_Contains(ST_GeomFromQuadbin(r.block),ST_Point(g.lon,g.lat)));")
 
 
+# OSI — Open Semantic Interchange: machine-readable semantics so an agent understands what
+# a dataset MEANS and what it answers, not just its schema. id -> (label, describes, answers, unit)
+SEM = {
+ "sahkolinja":("Electricity transmission lines","High-voltage overhead power lines (NLS Topographic Database).","grid-connection proximity","metres"),
+ "jarvi":("Lakes & water bodies","Inland lakes and water bodies (NLS).","cooling-water & flood context","metres"),
+ "luonnonsuojelualue":("Protected nature areas","Statutory nature-protection areas (NLS).","environmental constraint","metres"),
+ "korkeusmalli_2m":("Elevation model — 2 m laser DEM","NLS 2 m laser-scanned terrain elevation.","flatness & topographic flood screen","metres"),
+ "ndvi":("Sentinel-2 NDVI","Copernicus Sentinel-2 vegetation index.","vegetation / forest cover","index (−1..1)"),
+ "urbanatlas":("Urban Atlas land use","Copernicus Urban Atlas 2018 land-use class per parcel.","land-use classification","class"),
+ "tulvavaarakartta":("Flood-hazard zones","SYKE flood inundation zones by return period.","flood risk","metres / return period"),
+ "natura2000":("Natura 2000 sites","EU Natura 2000 protected network (SAC + SPA), via SYKE.","protected nature","metres"),
+ "pohjavesialue":("Classified groundwater areas","SYKE classified groundwater areas (VHS2022).","groundwater abstraction / contamination constraint","metres"),
+ "rakennus":("Buildings","NLS building footprints.","residential proximity","metres"),
+ "seuturamava_kortteli":("Zoning · building-rights reserve","HSY per-plan-block land-use category and unused building-rights reserve.","what the plan permits","m² floor area"),
+ "temperature":("Mean annual air temperature","Location Finland climate coverage (°C).","cooling / free-cooling potential","°C"),
+ "paavo_vaesto":("Postal-area demographics","Statistics Finland Paavo: population, income, employment, age.","who lives & works here","persons / EUR"),
+ "vaestoruutu_1km":("Population grid · 1 km","Statistics Finland inhabitants per 1 km cell.","residential density","persons"),
+ "ykr_urban_structure":("Urban-structure zones (YKR)","Location Finland settlement-structure classification.","urban → peripheral gradient","class"),
+ "electricity_prices":("Industrial electricity price","Eurostat industrial electricity price by country (incl. taxes).","energy cost","EUR / kWh"),
+ "places":("Points of interest","Overture global places (cloud-native, planet scale).","amenities & activity","count"),
+}
+
 def collect_rows():
     """All STAC items as a row dict R, plus a parallel `publisher` list and a `mat`
     list of (kind, value, format) — kind in {'table','url',None} — so each index can
@@ -300,12 +322,17 @@ def collect_rows():
         R["geometry"].append(_wkb_box(x0, y0, x1, y1))
         R["xmin"].append(x0); R["ymin"].append(y0); R["xmax"].append(x1); R["ymax"].append(y1)
         R["datetime"].append(None)
-        R["properties"].append(json.dumps({
-            "title": title, "description": (desc or "")[:400],
+        sem = SEM.get(cid)
+        props = {
+            "title": (sem[0] if sem else title), "description": ((sem[1] if sem else desc) or "")[:400],
             "keywords": kw.split("; ") if kw else [], "item_type": item_type, "crs": crs,
             "materialized": mat is not None, "data_format": (mat[2] if mat else None),
             "access_recipe": (recipe if recipe else "convert on demand: publisher OGC API Features -> gpio -> bucket"),
-            "example_query": _example_query(mat)}))
+            "example_query": _example_query(mat)}
+        if sem:  # Open Semantic Interchange (OSI) block — what it means / answers / unit
+            props["semantics"] = {"spec": "Open Semantic Interchange", "label": sem[0],
+                                  "describes": sem[1], "answers": sem[2], "unit": sem[3]}
+        R["properties"].append(json.dumps(props))
         R["stac_version"].append("1.1.0"); R["type"].append("Feature")
         R["publisher"].append(publisher_of(coll)); R["mat"].append(mat)
     for c in cols:
