@@ -6,6 +6,14 @@
   "description": "The root directory of the Portolan demo federation: a catalog of catalogs. Each child below is an independent, sovereign publisher exposing its own Apache Iceberg catalog on European object storage (UpCloud 🇫🇮), attached anonymously with DuckDB. Attach a child by its href and read its own STAC index table `catalog.datasets` (stac-geoparquet) — which lists only that publisher's datasets, each carrying its own OSI semantics, CRS and schema. That is the progressive discovery: this root → a publisher catalog → a dataset → a query you compose yourself. Each child carries a `bbox` (WGS84) so you can pre-filter to the catalogs whose extent covers your location before attaching. Adding a publisher is a new child link here; no client code changes. Today: 9 publishers, 18 datasets, spanning regional → national → EU → global (two non-geospatial, to show the SDI federates open data, not just maps).",
   "portolan:publishers": 9,
   "portolan:total_datasets": 18,
+  "portolan:contributions": {
+    "via": "github",
+    "repo": "https://github.com/jatorre/carto-ogc-helsinki",
+    "issues_url": "https://github.com/jatorre/carto-ogc-helsinki/issues",
+    "accepts": ["issue", "pull_request"],
+    "scope": "Report a data or metadata error, or request a new dataset / publisher. For this demo every catalog routes here; in production each publisher declares its own repo, so feedback about a dataset reaches the publisher who owns it.",
+    "note": "INTERIM / NOT SOVEREIGN — GitHub is US-hosted (Fastly CDN). This is a placeholder for the feedback loop. A sovereign channel (self-hosted Forgejo/GitLab on EU infra, or a contributions endpoint beside the catalog) is still to be designed."
+  },
   "extent": {
     "spatial": {
       "bbox": [
@@ -25,6 +33,12 @@
       "rel": "self",
       "href": "https://8et4c.upcloudobjects.com/carto-ogc-connect-helsinki/catalog/stac.json",
       "type": "application/json"
+    },
+    {
+      "rel": "feedback",
+      "href": "https://github.com/jatorre/carto-ogc-helsinki/issues",
+      "type": "text/html",
+      "title": "Report data/metadata issues or request datasets (GitHub — interim, not sovereign)"
     },
     {
       "rel": "child",

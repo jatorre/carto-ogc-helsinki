@@ -79,6 +79,12 @@ State your assumptions (DC size, per-capita figures) out loud, and keep every nu
 - **Sovereignty:** "European / sovereign infrastructure" — not "no data leaves the country".
 - Always: this is an **initial spatial screening, not a permit decision.** Every number keeps its source + query.
 
+## Feedback — closing the loop
+The registry advertises a `portolan:contributions` channel (repo + issues URL). If you hit a
+data or metadata error, or the federation is missing a dataset the question genuinely needs,
+you can open an issue or PR there — contributing to data the way you'd contribute to software,
+with the publisher reviewing it. (Today this routes to GitHub: interim and **not sovereign**.)
+
 ## Web demo
 `webapp/` is a **precomputed snapshot** of one run of this flow (a CARTO-branded site that
 replays the Espoo scenario from committed `data/*.json`). In a live session, do the
