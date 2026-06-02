@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build a static Iceberg REST catalog of the Espoo data-center datasets on
+"""Build a static Iceberg REST catalog of Helsinki-region open-data datasets on
 UpCloud. Three layers:
   - v2/* : GeoIceberg V2 vector tables (WKB + flat bbox) — DuckDB-portable
   - v3/* : native V3 geometry vector tables (geoarrow) — Snowflake/CARTO
@@ -43,17 +43,17 @@ DATASETS = {
     "power_lines": dict(
         title="Electricity transmission lines (NLS Topographic Database)", theme="energy / grid",
         semantics=dict(describes="Overhead high-voltage electricity transmission lines (NLS).",
-                       answers=["grid proximity", "distance to power infrastructure", "can-i-build-a-data-center"],
+                       answers=["distance to electricity transmission lines", "power infrastructure mapping"],
                        geometry="LineString")),
     "protected": dict(
-        title="Protected nature areas (NLS luonnonsuojelualue)", theme="environment / constraint",
+        title="Protected nature areas (NLS luonnonsuojelualue)", theme="environment / nature conservation",
         semantics=dict(describes="Statutory nature protection areas (NLS).",
-                       answers=["environmental constraint", "distance to protected area", "can-i-build-a-data-center"],
+                       answers=["distance to protected areas", "nature conservation"],
                        geometry="Polygon")),
     "water": dict(
         title="Water bodies / lakes (NLS jarvi)", theme="environment / water",
         semantics=dict(describes="Inland water bodies / lakes (NLS).",
-                       answers=["water proximity", "flood / cooling context", "can-i-build-a-data-center"],
+                       answers=["distance to inland waters", "hydrology / shoreline"],
                        geometry="Polygon")),
 }
 COLS = ["id", "kohderyhma", "kohdeluokka", "fp_xmin", "fp_ymin", "fp_xmax", "fp_ymax", "geom_wkb"]
@@ -163,11 +163,11 @@ def build_v3(name, info):
 # `sdi`) uses `sdi.v2.<t>`, a publisher catalog uses `v2.<t>` (relative to its alias).
 MATERIALIZED = {  # NLS id -> (v2 table base, format, recipe, keywords)
     "sahkolinja": ("power_lines", "geoparquet",
-                   "ST_Distance to ST_GeomFromWKB(geom_wkb) in EPSG:3067", "grid proximity; can-i-build-a-data-center"),
+                   "ST_Distance to ST_GeomFromWKB(geom_wkb) in EPSG:3067", "electricity transmission; power grid; energy infrastructure"),
     "luonnonsuojelualue": ("protected", "geoparquet",
-                   "ST_Distance to protected polygons in EPSG:3067", "environmental constraint; can-i-build-a-data-center"),
+                   "ST_Distance to protected polygons in EPSG:3067", "protected areas; nature conservation; environment"),
     "jarvi": ("water", "geoparquet",
-                   "ST_Distance to lakes in EPSG:3067", "water/cooling/flood context; can-i-build-a-data-center"),
+                   "ST_Distance to lakes in EPSG:3067", "lakes; water bodies; hydrology"),
 }
 RELEVANT = {"tieviiva": "roads; access",
             "muuntaja": "transformer/substation; grid", "korkeuskayra": "contours; terrain"}
@@ -176,7 +176,7 @@ RELEVANT = {"tieviiva": "roads; access",
 FILE_MATERIALIZED = {
     "rakennus": (f"{EXTRA}/buildings.parquet",
                  "nearest building distance (m): ST_Distance over geom in EPSG:3067",
-                 "buildings; residential proximity; can-i-build-a-data-center"),
+                 "buildings; building footprints; built environment"),
 }
 
 # collection prefix -> publisher sub-catalog (who converted it)
@@ -211,6 +211,8 @@ PUBLISHERS = {
     "overture-maps":                 ("overture-maps", "overture"),
     "eurostat":                      ("eurostat", "eurostat"),
 }
+PROVIDER = {"national-land-survey":"National Land Survey of Finland","finnish-environment-institute":"Finnish Environment Institute (SYKE)","copernicus":"Copernicus / European Union","helsinki-region-hsy":"Helsinki Region Environmental Services (HSY)","statistics-finland":"Statistics Finland","fingrid":"Fingrid","location-finland":"Location Finland","overture-maps":"Overture Maps Foundation","eurostat":"Eurostat"}
+LICENSE = {"overture-maps":"CDLA-Permissive-2.0 / ODbL","copernicus":"Copernicus open licence","eurostat":"Eurostat licence"}
 
 
 def _wkb_box(x0, y0, x1, y1):
@@ -288,21 +290,21 @@ def _example_query(mat):
 # OSI — Open Semantic Interchange: machine-readable semantics so an agent understands what
 # a dataset MEANS and what it answers, not just its schema. id -> (label, describes, answers, unit)
 SEM = {
- "sahkolinja":("Electricity transmission lines","High-voltage overhead power lines (NLS Topographic Database).","grid-connection proximity","metres"),
- "jarvi":("Lakes & water bodies","Inland lakes and water bodies (NLS).","cooling-water & flood context","metres"),
- "luonnonsuojelualue":("Protected nature areas","Statutory nature-protection areas (NLS).","environmental constraint","metres"),
- "korkeusmalli_2m":("Elevation model — 2 m laser DEM","NLS 2 m laser-scanned terrain elevation.","flatness & topographic flood screen","metres"),
+ "sahkolinja":("Electricity transmission lines","High-voltage overhead power lines (NLS Topographic Database).","distance to electricity transmission lines","metres"),
+ "jarvi":("Lakes & water bodies","Inland lakes and water bodies (NLS).","distance to inland water bodies","metres"),
+ "luonnonsuojelualue":("Protected nature areas","Statutory nature-protection areas (NLS).","distance to protected areas","metres"),
+ "korkeusmalli_2m":("Elevation model — 2 m laser DEM","NLS 2 m laser-scanned terrain elevation.","terrain elevation & slope","metres"),
  "ndvi":("Sentinel-2 NDVI","Copernicus Sentinel-2 vegetation index.","vegetation / forest cover","index (−1..1)"),
  "urbanatlas":("Urban Atlas land use","Copernicus Urban Atlas 2018 land-use class per parcel.","land-use classification","class"),
  "tulvavaarakartta":("Flood-hazard zones","SYKE flood inundation zones by return period.","flood risk","metres / return period"),
  "natura2000":("Natura 2000 sites","EU Natura 2000 protected network (SAC + SPA), via SYKE.","protected nature","metres"),
- "pohjavesialue":("Classified groundwater areas","SYKE classified groundwater areas (VHS2022).","groundwater abstraction / contamination constraint","metres"),
- "rakennus":("Buildings","NLS building footprints.","residential proximity","metres"),
- "seuturamava_kortteli":("Zoning · building-rights reserve","HSY per-plan-block land-use category and unused building-rights reserve.","what the plan permits","m² floor area"),
- "temperature":("Mean annual air temperature","Location Finland climate coverage (°C).","cooling / free-cooling potential","°C"),
- "paavo_vaesto":("Postal-area demographics","Statistics Finland Paavo: population, income, employment, age.","who lives & works here","persons / EUR"),
- "vaestoruutu_1km":("Population grid · 1 km","Statistics Finland inhabitants per 1 km cell.","residential density","persons"),
- "ykr_urban_structure":("Urban-structure zones (YKR)","Location Finland settlement-structure classification.","urban → peripheral gradient","class"),
+ "pohjavesialue":("Classified groundwater areas","SYKE classified groundwater areas (VHS2022).","distance to classified groundwater areas","metres"),
+ "rakennus":("Buildings","NLS building footprints.","distance to buildings","metres"),
+ "seuturamava_kortteli":("Zoning · building-rights reserve","HSY per-plan-block land-use category and unused building-rights reserve.","permitted land use & building-rights reserve","m² floor area"),
+ "temperature":("Mean annual air temperature","Location Finland climate coverage (°C).","mean annual air temperature","°C"),
+ "paavo_vaesto":("Postal-area demographics","Statistics Finland Paavo: population, income, employment, age.","population, income & employment by postal area","persons / EUR"),
+ "vaestoruutu_1km":("Population grid · 1 km","Statistics Finland inhabitants per 1 km cell.","population per 1 km cell","persons"),
+ "ykr_urban_structure":("Urban-structure zones (YKR)","Location Finland settlement-structure classification.","settlement-structure classification","class"),
  "electricity_prices":("Industrial electricity price","Eurostat industrial electricity price by country (incl. taxes).","energy cost","EUR / kWh"),
  "places":("Points of interest","Overture global places (cloud-native, planet scale).","amenities & activity","count"),
 }
@@ -328,6 +330,8 @@ def collect_rows():
             "keywords": kw.split("; ") if kw else [], "item_type": item_type, "crs": crs,
             "materialized": mat is not None, "data_format": (mat[2] if mat else None),
             "access_recipe": (recipe if recipe else "convert on demand: publisher OGC API Features -> gpio -> bucket"),
+            "provider": PROVIDER.get(publisher_of(coll), publisher_of(coll)),
+            "license": LICENSE.get(publisher_of(coll), "CC-BY-4.0"),
             "example_query": _example_query(mat)}
         if sem:  # Open Semantic Interchange (OSI) block — what it means / answers / unit
             props["semantics"] = {"spec": "Open Semantic Interchange", "label": sem[0],
@@ -348,22 +352,22 @@ def collect_rows():
         add(c["id"], "nls-topographic", c.get("title"), c.get("description"), c.get("itemType"),
             bbox, "OGC:CRS84", mat, recipe, kw)
     add("korkeusmalli_2m", "nls-elevation", "Elevation model 2 m (laser DEM)",
-        "NLS 2 m laser-scanned elevation model — flatness + flood for data-center siting.", "coverage",
+        "NLS 2 m laser-scanned terrain elevation model.", "coverage",
         [24.62, 60.21, 24.76, 60.27], "EPSG:3067",
         ("url", f"{BASE_URI}/data/raster/dem_2m.parquet", "raquet"),
         "read_raquet + ST_RasterValue grid-sample (finest zoom via ST_GeomFromQuadbin)",
-        "flatness; flood; elevation; can-i-build-a-data-center")
+        "elevation; terrain; slope; digital elevation model")
     add("ndvi", "copernicus-sentinel2", "Sentinel-2 NDVI (red+NIR)",
         "Copernicus Sentinel-2 red/NIR for NDVI — vegetation/forest that would be cleared.", "coverage",
         [24.62, 60.21, 24.76, 60.27], "EPSG:3857",
         ("url", f"{BASE_URI}/data/raster/ndvi.parquet", "raquet"),
         "read_raquet; NDVI=(band_2-band_1)/(band_2+band_1)",
-        "vegetation; forest clearing; land cover; can-i-build-a-data-center")
+        "vegetation; NDVI; land cover; remote sensing")
     add("urbanatlas", "copernicus-urbanatlas", "Urban Atlas 2018 land use (Helsinki FUA)",
         "Copernicus Urban Atlas 2018 land-use polygons for the Helsinki Functional Urban Area — the authoritative land-use class per parcel (e.g. Forests, Discontinuous urban fabric, Industrial).",
         "feature", [24.15, 60.08, 24.80, 60.40], "OGC:CRS84", ("class", f"{EXTRA}/urbanatlas.parquet", "geoparquet"),
         "land-use class at the site (point-in-polygon): SELECT class_2018 WHERE ST_Contains(geom, site)",
-        "land use; land cover; forest; urban fabric; residential; can-i-build-a-data-center")
+        "land use; land cover; urban atlas; copernicus")
     # SYKE — Finnish Environment Institute. Flood + Natura + groundwater MATERIALIZED
     # (clipped to the Helsinki-region AOI from SYKE's OGC API Features); CORINE still convert-on-demand.
     AOI = [24.15, 60.08, 24.80, 60.40]
@@ -371,67 +375,67 @@ def collect_rows():
         "SYKE flood-hazard inundation zones by return period (tulvavaaravyöhykkeet, perusskenaariot), clipped to the Helsinki-region AOI.",
         "feature", AOI, "OGC:CRS84", ("file", f"{EXTRA}/flood_hazard.parquet", "geoparquet"),
         "nearest flood-hazard zone (m): ST_Distance over geom in EPSG:3067 (attribute tulvasuojtoistuvuus = return period, yr)",
-        "flood risk; flood hazard; can-i-build-a-data-center")
+        "flood risk; flood hazard")
     add("natura2000", "syke", "Natura 2000 protected areas (SAC + SPA)",
         "EU Natura 2000 network — habitats (SAC) + birds (SPA) directive sites in the AOI, published by SYKE.",
         "feature", AOI, "OGC:CRS84", ("file", f"{EXTRA}/natura2000.parquet", "geoparquet"),
         "nearest Natura 2000 site (m): ST_Distance over geom in EPSG:3067",
-        "environmental constraint; protected; natura; can-i-build-a-data-center")
+        "environmental constraint; protected; natura")
     add("pohjavesialue", "syke", "Groundwater areas (classified, VHS2022)",
-        "SYKE classified groundwater areas (pohjavesialueet, VHS2022) — water-supply abstraction & contamination constraint for siting.",
+        "SYKE classified groundwater areas (pohjavesialueet, VHS2022), delineated for water-supply protection.",
         "feature", AOI, "OGC:CRS84", ("file", f"{EXTRA}/groundwater.parquet", "geoparquet"),
         "distance to / inside a classified groundwater area (m): ST_Distance over geom in EPSG:3067",
-        "groundwater; cooling water; permitting constraint; can-i-build-a-data-center")
+        "groundwater; aquifer; water supply; environment")
     add("corine-land-cover", "syke", "CORINE Land Cover 2018",
         "Pan-European CORINE land cover for Finland, published by SYKE.", "coverage", AOI, "OGC:CRS84", None, None,
-        "land cover; vegetation; can-i-build-a-data-center")
+        "land cover; vegetation")
     # HSY (Helsinki Region Environmental Services) — regional planning. SeutuRAMAVA = per
     # detailed-plan-block land-use category + built vs unused building-rights reserve.
     add("seuturamava_kortteli", "hsy-maankaytto", "Zoning / building-rights reserve by plan block (SeutuRAMAVA)",
         "HSY regional building-land reserve aggregated from municipal detailed plans, per plan block: land-use category, built floor area, and unused building-rights reserve (AK/AP/K/T/Y). Covers Espoo/Vantaa/Kauniainen.",
         "feature", AOI, "OGC:CRS84", ("zoning", f"{EXTRA}/hsy_zoning.parquet", "geoparquet"),
         "plan block at the site: built vs reserve floor area by use category (T = industrial)",
-        "zoning; land-use plan; building rights; what does the plan permit; can-i-build-a-data-center")
+        "zoning; land-use plan; building rights; spatial planning")
     # Fingrid — NON-spatial: national electricity grid load (time-series). Shows the SDI is not geo-only.
     add("electricity_consumption", "fingrid-grid", "Finland electricity consumption (national grid load)",
-        "Fingrid national electricity consumption, 15-min values in MW (30-day snapshot). Non-spatial time-series — grid-load / capacity context for siting a large consumer like a data centre.",
+        "Fingrid national electricity consumption, 15-min values in MW (30-day snapshot). Non-spatial time-series of national electricity demand.",
         "timeseries", None, None, ("tabular", f"{EXTRA}/fingrid_consumption.parquet", "parquet"),
-        "recent national load: avg / peak / min MW (a hyperscale data centre is ~100-300 MW for scale)",
-        "electricity; grid; capacity; power; non-spatial; can-i-build-a-data-center")
+        "recent national electricity load: avg / peak / min MW",
+        "electricity; grid; capacity; power; non-spatial")
     # Statistics Finland — official statistics (Paavo postal-area demographics + 1 km population grid)
     add("paavo_vaesto", "statfi-paavo", "Postal-area demographics (Paavo 2025)",
         "Statistics Finland Paavo open data: population, income, employment and age structure per postal-code area — statistics joined to postal-area geometry.",
         "feature", AOI, "OGC:CRS84", ("demographics", f"{EXTRA}/statfi_paavo.parquet", "geoparquet"),
         "demographics of the postal area at the site: population, median income (EUR), jobs, unemployed",
-        "demographics; population; income; jobs; residential; statistics; can-i-build-a-data-center")
+        "demographics; population; income; employment; statistics")
     add("vaestoruutu_1km", "statfi-vaesto", "Population grid 1 km (2025)",
-        "Statistics Finland 1 km population grid: inhabitants and age groups per cell — residential density right at the site.",
+        "Statistics Finland 1 km population grid: inhabitants and age groups per cell.",
         "feature", AOI, "OGC:CRS84", ("popgrid", f"{EXTRA}/statfi_popgrid.parquet", "geoparquet"),
         "population in the 1 km cell at the site (with age groups)",
-        "population; density; residential; statistics; can-i-build-a-data-center")
+        "population; population density; demographics; statistics")
     # Location Finland (national Location Innovation Hub platform, API-key gateway) — urban structure
     add("ykr_urban_structure", "lf-ykr", "Urban structure zones (YKR)",
         "Location Finland (national geospatial platform): YKR settlement/urban-structure zone classification — places the site on the urban→peripheral gradient (1 = inner urban; higher = more peripheral / rural).",
         "feature", AOI, "OGC:CRS84", ("ykr", f"{EXTRA}/lf_ykr.parquet", "geoparquet"),
         "YKR urban-structure zone class at the site (point-in-polygon)",
-        "urban structure; settlement; land use; can-i-build-a-data-center")
+        "urban structure; settlement; land use")
     add("temperature", "lf-climate", "Mean annual air temperature (climate grid)",
-        "Location Finland climate coverage: mean annual air temperature in °C — relevant to data-centre cooling / free-cooling potential. Materialized from the OGC API coverage (GeoTIFF) to cloud-native raquet via the DuckDB raquet extension.",
+        "Location Finland climate coverage: mean annual air temperature (°C). Materialized from the OGC API coverage (GeoTIFF) to cloud-native raquet via the DuckDB raquet extension.",
         "coverage", AOI, "EPSG:3067", ("climate", f"{BASE_URI}/data/raster/cli_temperature.parquet", "raquet"),
         "mean annual temperature (°C) at the site, sampled from the raquet raster",
-        "climate; temperature; cooling; free cooling; can-i-build-a-data-center")
+        "climate; air temperature; meteorology")
     # Overture Maps (GLOBAL) — the same DuckDB-over-GeoParquet pattern, at planet scale.
     add("places", "overture-places", "Points of interest (Overture Maps, global)",
         "Overture Maps global places — a slice of the planet-scale, cloud-native GeoParquet catalog (released on object storage, queried with DuckDB exactly like everything else here). POI density / activity around the site.",
         "feature", [24.15, 60.08, 24.80, 60.40], "OGC:CRS84", ("poicount", f"{EXTRA}/overture_places.parquet", "geoparquet"),
         "number of Overture places within 1 km of the site (filter `category` for supermarkets, schools, etc.)",
-        "points of interest; supermarkets; grocery; amenities; services; activity; global; can-i-build-a-data-center")
-    # Eurostat (EUROPEAN) — NON-spatial: EU-wide electricity prices, the data-centre cost driver.
+        "points of interest; supermarkets; grocery; amenities; services; activity; global")
+    # Eurostat (EUROPEAN) — NON-spatial: EU-wide industrial electricity prices.
     add("electricity_prices", "eurostat-energy", "Electricity prices, industrial (Eurostat)",
-        "Eurostat electricity prices for industrial consumers (band 2000–20000 MWh/yr, incl. taxes, €/kWh): Finland vs the EU-27 average — the cost driver behind data-centre siting. Non-spatial.",
+        "Eurostat electricity prices for industrial consumers (band 2000–20000 MWh/yr, incl. taxes, €/kWh): Finland vs the EU-27 average, by country. Non-spatial.",
         "table", None, None, ("prices", f"{EXTRA}/eurostat_elec.parquet", "parquet"),
         "Finland vs EU-27 industrial electricity price (EUR/kWh)",
-        "electricity price; energy cost; non-spatial; european; can-i-build-a-data-center")
+        "electricity price; energy cost; non-spatial; european")
     return R
 
 
@@ -516,7 +520,7 @@ def write_index(R, idxs, storage_key, scope, title):
     props = {"geo": json.dumps(_IDX_GEO), "theme": "catalog-index", "format": "stac-geoparquet", "title": title,
              "semantics": json.dumps({"describes": "STAC Items for this catalog's datasets (stac-geoparquet). properties.materialized=true means cloud-native data is published (assets.data.href); others catalogued & convertible on demand.",
                                       "answers": ["dataset discovery", "what data exists", "is X available"],
-                                      "query_recipe": f"SELECT id, collection, assets FROM {qcat}.catalog.datasets WHERE properties ILIKE '%data-center%'"})}
+                                      "query_recipe": f"SELECT id, collection, assets FROM {qcat}.catalog.datasets WHERE properties ILIKE '%elevation%'"})}
     mp = write_static_catalog(table_root=root, iceberg_schema=_IDX_ICE, schema_json_fields=_IDX_FIELDS,
                               name_mapping=_IDX_NAMEMAP, data_files=[{"path": "data/datasets.parquet",
                               "size": pqpath.stat().st_size, "rows": tbl.num_rows, "lower": {}, "upper": {}}],

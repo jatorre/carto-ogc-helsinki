@@ -385,8 +385,8 @@ const STEPS=[
     body:"ATTACH 'nls'  (TYPE iceberg, ENDPOINT '…/national-land-survey',  AUTHORIZATION_TYPE 'none');\nATTACH 'syke' (TYPE iceberg, ENDPOINT '…/finnish-environment-institute', …);\nATTACH 'cop'  …  ATTACH 'hsy' …  ATTACH 'lf' …",res:"5 sovereign catalogs attached · anonymous · no server"}]},
 
  {c:"INSPECT · OSI",t:"Each catalog explains itself.",
-  b:"The agent doesn't guess at a schema. It lists the catalog's tables, then reads each dataset's own metadata — a STAC item with an <b>Open Semantic Interchange</b> block: what it <em>describes</em>, what it <em>answers</em>, its <em>unit</em> — plus a runnable example query. It learns what the data <em>means</em>, not just its columns.",
-  note:"OSI semantics travel in-band — any agent or tool reads the same meaning.",
+  b:"The agent doesn't guess at a schema. It lists the catalog's tables, then reads each dataset's own metadata — a STAC item with an <b>Open Semantic Interchange</b> block: what it <em>describes</em>, what it <em>answers</em>, its <em>unit</em>, provider and licence — plus a runnable example query. Nothing here is tailored to our question; it's a normal, publisher-authored catalog. The agent <em>infers</em> relevance from clean, generic descriptions.",
+  note:"clean & self-describing — the use case lives in the agent, never in the catalog.",
   tech:[["STAC","#FF6F61"],["OSI · semantics","#39E6C8"],["GeoParquet","#5B9BD5"]],
   tl:"read STAC items + their OSI semantics from the catalog's index; the skill holds no query knowledge.",
   feed:[
@@ -394,7 +394,7 @@ const STEPS=[
    {role:"agent",tool:{tag:"SHOW ALL TABLES",cmd:"nls"},
     body:'nls.catalog.datasets        <span class="c"># the STAC index — 129 datasets</span>\nnls.v2.power_lines · v2.water · v2.protected   <span class="c"># GeoParquet (WKB)</span>\nnls.v3.*                    <span class="c"># native-geometry mirror</span>'},
    {role:"agent",tool:{tag:"read STAC + OSI",cls:"reg",cmd:"SELECT properties FROM nls.catalog.datasets WHERE id = 'sahkolinja'"},
-    body:'{\n  "title": "Electricity transmission lines",\n  "keywords": ["grid proximity", <span class="k">"can-i-build-a-data-center"</span>],\n  "crs": "OGC:CRS84", "materialized": true,\n  <span class="k">"semantics"</span>: {            <span class="c">// Open Semantic Interchange</span>\n      "describes": "high-voltage overhead power lines",\n      "answers": "grid-connection proximity", "unit": "metres" },\n  "example_query": "ST_Distance( geom_wkb → EPSG:3067 ) …",\n  "assets": { "data": { "href": "v2.power_lines" } }\n}',res:"understood: distance-to-grid, metres · query supplied"}]},
+    body:'{\n  "title": "Electricity transmission lines",\n  "keywords": ["electricity transmission", "power grid", "energy infrastructure"],\n  "provider": "National Land Survey of Finland", "license": "CC-BY-4.0",\n  "crs": "OGC:CRS84", "materialized": true,\n  <span class="k">"semantics"</span>: {            <span class="c">// Open Semantic Interchange</span>\n      "describes": "high-voltage overhead power lines",\n      "answers": "distance to electricity transmission lines", "unit": "metres" },\n  "example_query": "ST_Distance( geom_wkb → EPSG:3067 ) …",\n  "assets": { "data": { "href": "v2.power_lines" } }\n}',res:"clean, generic metadata — the agent reasons that power lines bear on a data centre; nothing was pre-tagged for us"}]},
 
  {c:"QUERY",t:"Query the files in place.",
   b:"DuckDB reads GeoParquet and raquet rasters directly from object storage — no GIS server, no downloads. Each materialized dataset answers with its own query.",
