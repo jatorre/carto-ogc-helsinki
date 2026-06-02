@@ -1,1 +1,250 @@
-{"total": 133, "materialized": 5, "publishers": [{"publisher": "Copernicus (EU)", "flag": "\ud83c\uddea\ud83c\uddfa", "n": 1, "materialized": 1}, {"publisher": "National Land Survey of Finland", "flag": "\ud83c\uddeb\ud83c\uddee", "n": 129, "materialized": 4}, {"publisher": "Finnish Environment Institute (SYKE)", "flag": "\ud83c\uddeb\ud83c\uddee", "n": 3, "materialized": 0}], "datasets": [{"id": "ndvi", "collection": "copernicus-sentinel2", "title": "Sentinel-2 NDVI (vegetation)", "materialized": true, "item_type": "coverage", "publisher": "Copernicus (EU)", "flag": "\ud83c\uddea\ud83c\uddfa"}, {"id": "korkeusmalli_2m", "collection": "nls-elevation", "title": "Elevation model (2 m laser DEM)", "materialized": true, "item_type": "coverage", "publisher": "National Land Survey of Finland", "flag": "\ud83c\uddeb\ud83c\uddee"}, {"id": "jarvi", "collection": "nls-topographic", "title": "Lakes & water bodies", "materialized": true, "item_type": "feature", "publisher": "National Land Survey of Finland", "flag": "\ud83c\uddeb\ud83c\uddee"}, {"id": "luonnonsuojelualue", "collection": "nls-topographic", "title": "Protected nature areas", "materialized": true, "item_type": "feature", "publisher": "National Land Survey of Finland", "flag": "\ud83c\uddeb\ud83c\uddee"}, {"id": "sahkolinja", "collection": "nls-topographic", "title": "Electricity transmission lines", "materialized": true, "item_type": "feature", "publisher": "National Land Survey of Finland", "flag": "\ud83c\uddeb\ud83c\uddee"}, {"id": "aallonmurtaja", "collection": "nls-topographic", "title": "aallonmurtaja", "materialized": false, "item_type": "feature", "publisher": "National Land Survey of Finland", "flag": "\ud83c\uddeb\ud83c\uddee"}, {"id": "aidansymboli", "collection": "nls-topographic", "title": "aidansymboli", "materialized": false, "item_type": "feature", "publisher": "National Land Survey of Finland", "flag": "\ud83c\uddeb\ud83c\uddee"}, {"id": "aita", "collection": "nls-topographic", "title": "aita", "materialized": false, "item_type": "feature", "publisher": "National Land Survey of Finland", "flag": "\ud83c\uddeb\ud83c\uddee"}, {"id": "allas", "collection": "nls-topographic", "title": "allas", "materialized": false, "item_type": "feature", "publisher": "National Land Survey of Finland", "flag": "\ud83c\uddeb\ud83c\uddee"}, {"id": "aluemerenulkoraja", "collection": "nls-topographic", "title": "aluemerenulkoraja", "materialized": false, "item_type": "feature", "publisher": "National Land Survey of Finland", "flag": "\ud83c\uddeb\ud83c\uddee"}, {"id": "ampumaalue", "collection": "nls-topographic", "title": "ampumaalue", "materialized": false, "item_type": "feature", "publisher": "National Land Survey of Finland", "flag": "\ud83c\uddeb\ud83c\uddee"}, {"id": "ankkuripaikka", "collection": "nls-topographic", "title": "ankkuripaikka", "materialized": false, "item_type": "feature", "publisher": "National Land Survey of Finland", "flag": "\ud83c\uddeb\ud83c\uddee"}, {"id": "autoliikennealue", "collection": "nls-topographic", "title": "autoliikennealue", "materialized": false, "item_type": "feature", "publisher": "National Land Survey of Finland", "flag": "\ud83c\uddeb\ud83c\uddee"}, {"id": "harvalouhikko", "collection": "nls-topographic", "title": "harvalouhikko", "materialized": false, "item_type": "feature", "publisher": "National Land Survey of Finland", "flag": "\ud83c\uddeb\ud83c\uddee"}, {"id": "hautausmaa", "collection": "nls-topographic", "title": "hautausmaa", "materialized": false, "item_type": "feature", "publisher": "National Land Survey of Finland", "flag": "\ud83c\uddeb\ud83c\uddee"}, {"id": "hietikko", "collection": "nls-topographic", "title": "hietikko", "materialized": false, "item_type": "feature", "publisher": "National Land Survey of Finland", "flag": "\ud83c\uddeb\ud83c\uddee"}, {"id": "hylky", "collection": "nls-topographic", "title": "hylky", "materialized": false, "item_type": "feature", "publisher": "National Land Survey of Finland", "flag": "\ud83c\uddeb\ud83c\uddee"}, {"id": "hylynsyvyys", "collection": "nls-topographic", "title": "hylynsyvyys", "materialized": false, "item_type": "feature", "publisher": "National Land Survey of Finland", "flag": "\ud83c\uddeb\ud83c\uddee"}, {"id": "ilmaradankannatinpylvas", "collection": "nls-topographic", "title": "ilmaradankannatinpylvas", "materialized": false, "item_type": "feature", "publisher": "National Land Survey of Finland", "flag": "\ud83c\uddeb\ud83c\uddee"}, {"id": "ilmarata", "collection": "nls-topographic", "title": "ilmarata", "materialized": false, "item_type": "feature", "publisher": "National Land Survey of Finland", "flag": "\ud83c\uddeb\ud83c\uddee"}, {"id": "jyrkanne", "collection": "nls-topographic", "title": "jyrkanne", "materialized": false, "item_type": "feature", "publisher": "National Land Survey of Finland", "flag": "\ud83c\uddeb\ud83c\uddee"}, {"id": "kaatopaikka", "collection": "nls-topographic", "title": "kaatopaikka", "materialized": false, "item_type": "feature", "publisher": "National Land Survey of Finland", "flag": "\ud83c\uddeb\ud83c\uddee"}, {"id": "kaislikko", "collection": "nls-topographic", "title": "kaislikko", "materialized": false, "item_type": "feature", "publisher": "National Land Survey of Finland", "flag": "\ud83c\uddeb\ud83c\uddee"}, {"id": "kallioalue", "collection": "nls-topographic", "title": "kallioalue", "materialized": false, "item_type": "feature", "publisher": "National Land Survey of Finland", "flag": "\ud83c\uddeb\ud83c\uddee"}, {"id": "kalliohalkeama", "collection": "nls-topographic", "title": "kalliohalkeama", "materialized": false, "item_type": "feature", "publisher": "National Land Survey of Finland", "flag": "\ud83c\uddeb\ud83c\uddee"}, {"id": "kalliosymboli", "collection": "nls-topographic", "title": "kalliosymboli", "materialized": false, "item_type": "feature", "publisher": "National Land Survey of Finland", "flag": "\ud83c\uddeb\ud83c\uddee"}, {"id": "kansallispuisto", "collection": "nls-topographic", "title": "kansallispuisto", "materialized": false, "item_type": "feature", "publisher": "National Land Survey of Finland", "flag": "\ud83c\uddeb\ud83c\uddee"}, {"id": "karttasymboli", "collection": "nls-topographic", "title": "karttasymboli", "materialized": false, "item_type": "feature", "publisher": "National Land Survey of Finland", "flag": "\ud83c\uddeb\ud83c\uddee"}, {"id": "kellotapuli", "collection": "nls-topographic", "title": "kellotapuli", "materialized": false, "item_type": "feature", "publisher": "National Land Survey of Finland", "flag": "\ud83c\uddeb\ud83c\uddee"}, {"id": "kivi", "collection": "nls-topographic", "title": "kivi", "materialized": false, "item_type": "feature", "publisher": "National Land Survey of Finland", "flag": "\ud83c\uddeb\ud83c\uddee"}, {"id": "kivikko", "collection": "nls-topographic", "title": "kivikko", "materialized": false, "item_type": "feature", "publisher": "National Land Survey of Finland", "flag": "\ud83c\uddeb\ud83c\uddee"}, {"id": "korkeuskayra", "collection": "nls-topographic", "title": "korkeuskayra", "materialized": false, "item_type": "feature", "publisher": "National Land Survey of Finland", "flag": "\ud83c\uddeb\ud83c\uddee"}, {"id": "korkeuskayrankorkeusarvo", "collection": "nls-topographic", "title": "korkeuskayrankorkeusarvo", "materialized": false, "item_type": "feature", "publisher": "National Land Survey of Finland", "flag": "\ud83c\uddeb\ud83c\uddee"}, {"id": "koski", "collection": "nls-topographic", "title": "koski", "materialized": false, "item_type": "feature", "publisher": "National Land Survey of Finland", "flag": "\ud83c\uddeb\ud83c\uddee"}, {"id": "kunnanhallintokeskus", "collection": "nls-topographic", "title": "kunnanhallintokeskus", "materialized": false, "item_type": "feature", "publisher": "National Land Survey of Finland", "flag": "\ud83c\uddeb\ud83c\uddee"}, {"id": "kunnanhallintoraja", "collection": "nls-topographic", "title": "kunnanhallintoraja", "materialized": false, "item_type": "feature", "publisher": "National Land Survey of Finland", "flag": "\ud83c\uddeb\ud83c\uddee"}, {"id": "kunta", "collection": "nls-topographic", "title": "kunta", "materialized": false, "item_type": "feature", "publisher": "National Land Survey of Finland", "flag": "\ud83c\uddeb\ud83c\uddee"}, {"id": "lahde", "collection": "nls-topographic", "title": "lahde", "materialized": false, "item_type": "feature", "publisher": "National Land Survey of Finland", "flag": "\ud83c\uddeb\ud83c\uddee"}, {"id": "lahestymisvalo", "collection": "nls-topographic", "title": "lahestymisvalo", "materialized": false, "item_type": "feature", "publisher": "National Land Survey of Finland", "flag": "\ud83c\uddeb\ud83c\uddee"}, {"id": "lentokenttaalue", "collection": "nls-topographic", "title": "lentokenttaalue", "materialized": false, "item_type": "feature", "publisher": "National Land Survey of Finland", "flag": "\ud83c\uddeb\ud83c\uddee"}, {"id": "louhos", "collection": "nls-topographic", "title": "louhos", "materialized": false, "item_type": "feature", "publisher": "National Land Survey of Finland", "flag": "\ud83c\uddeb\ud83c\uddee"}, {"id": "luiska", "collection": "nls-topographic", "title": "luiska", "materialized": false, "item_type": "feature", "publisher": "National Land Survey of Finland", "flag": "\ud83c\uddeb\ud83c\uddee"}, {"id": "luonnonpuisto", "collection": "nls-topographic", "title": "luonnonpuisto", "materialized": false, "item_type": "feature", "publisher": "National Land Survey of Finland", "flag": "\ud83c\uddeb\ud83c\uddee"}, {"id": "maaaineksenottoalue", "collection": "nls-topographic", "title": "maaaineksenottoalue", "materialized": false, "item_type": "feature", "publisher": "National Land Survey of Finland", "flag": "\ud83c\uddeb\ud83c\uddee"}, {"id": "maasto2kuvionreuna", "collection": "nls-topographic", "title": "maasto2kuvionreuna", "materialized": false, "item_type": "feature", "publisher": "National Land Survey of Finland", "flag": "\ud83c\uddeb\ud83c\uddee"}, {"id": "maastokuvionreuna", "collection": "nls-topographic", "title": "maastokuvionreuna", "materialized": false, "item_type": "feature", "publisher": "National Land Survey of Finland", "flag": "\ud83c\uddeb\ud83c\uddee"}, {"id": "maatalousmaa", "collection": "nls-topographic", "title": "maatalousmaa", "materialized": false, "item_type": "feature", "publisher": "National Land Survey of Finland", "flag": "\ud83c\uddeb\ud83c\uddee"}, {"id": "maatuvavesialue", "collection": "nls-topographic", "title": "maatuvavesialue", "materialized": false, "item_type": "feature", "publisher": "National Land Survey of Finland", "flag": "\ud83c\uddeb\ud83c\uddee"}, {"id": "masto", "collection": "nls-topographic", "title": "masto", "materialized": false, "item_type": "feature", "publisher": "National Land Survey of Finland", "flag": "\ud83c\uddeb\ud83c\uddee"}, {"id": "mastonkorkeus", "collection": "nls-topographic", "title": "mastonkorkeus", "materialized": false, "item_type": "feature", "publisher": "National Land Survey of Finland", "flag": "\ud83c\uddeb\ud83c\uddee"}, {"id": "matalikko", "collection": "nls-topographic", "title": "matalikko", "materialized": false, "item_type": "feature", "publisher": "National Land Survey of Finland", "flag": "\ud83c\uddeb\ud83c\uddee"}, {"id": "meri", "collection": "nls-topographic", "title": "meri", "materialized": false, "item_type": "feature", "publisher": "National Land Survey of Finland", "flag": "\ud83c\uddeb\ud83c\uddee"}, {"id": "merkittavaluontokohde", "collection": "nls-topographic", "title": "merkittavaluontokohde", "materialized": false, "item_type": "feature", "publisher": "National Land Survey of Finland", "flag": "\ud83c\uddeb\ud83c\uddee"}, {"id": "metsamaankasvillisuus", "collection": "nls-topographic", "title": "metsamaankasvillisuus", "materialized": false, "item_type": "feature", "publisher": "National Land Survey of Finland", "flag": "\ud83c\uddeb\ud83c\uddee"}, {"id": "metsamaanmuokkaus", "collection": "nls-topographic", "title": "metsamaanmuokkaus", "materialized": false, "item_type": "feature", "publisher": "National Land Survey of Finland", "flag": "\ud83c\uddeb\ud83c\uddee"}, {"id": "metsanraja", "collection": "nls-topographic", "title": "metsanraja", "materialized": false, "item_type": "feature", "publisher": "National Land Survey of Finland", "flag": "\ud83c\uddeb\ud83c\uddee"}, {"id": "muistomerkki", "collection": "nls-topographic", "title": "muistomerkki", "materialized": false, "item_type": "feature", "publisher": "National Land Survey of Finland", "flag": "\ud83c\uddeb\ud83c\uddee"}, {"id": "muuavoinalue", "collection": "nls-topographic", "title": "muuavoinalue", "materialized": false, "item_type": "feature", "publisher": "National Land Survey of Finland", "flag": "\ud83c\uddeb\ud83c\uddee"}, {"id": "muuntaja", "collection": "nls-topographic", "title": "muuntaja", "materialized": false, "item_type": "feature", "publisher": "National Land Survey of Finland", "flag": "\ud83c\uddeb\ud83c\uddee"}, {"id": "muuntoasema", "collection": "nls-topographic", "title": "muuntoasema", "materialized": false, "item_type": "feature", "publisher": "National Land Survey of Finland", "flag": "\ud83c\uddeb\ud83c\uddee"}, {"id": "nakotorni", "collection": "nls-topographic", "title": "nakotorni", "materialized": false, "item_type": "feature", "publisher": "National Land Survey of Finland", "flag": "\ud83c\uddeb\ud83c\uddee"}, {"id": "niitty", "collection": "nls-topographic", "title": "niitty", "materialized": false, "item_type": "feature", "publisher": "National Land Survey of Finland", "flag": "\ud83c\uddeb\ud83c\uddee"}, {"id": "osoitepiste", "collection": "nls-topographic", "title": "osoitepiste", "materialized": false, "item_type": "feature", "publisher": "National Land Survey of Finland", "flag": "\ud83c\uddeb\ud83c\uddee"}, {"id": "paikannimi", "collection": "nls-topographic", "title": "paikannimi", "materialized": false, "item_type": "feature", "publisher": "National Land Survey of Finland", "flag": "\ud83c\uddeb\ud83c\uddee"}, {"id": "pato", "collection": "nls-topographic", "title": "pato", "materialized": false, "item_type": "feature", "publisher": "National Land Survey of Finland", "flag": "\ud83c\uddeb\ud83c\uddee"}, {"id": "pelastuskoodipiste", "collection": "nls-topographic", "title": "pelastuskoodipiste", "materialized": false, "item_type": "feature", "publisher": "National Land Survey of Finland", "flag": "\ud83c\uddeb\ud83c\uddee"}, {"id": "pistolaituriviiva", "collection": "nls-topographic", "title": "pistolaituriviiva", "materialized": false, "item_type": "feature", "publisher": "National Land Survey of Finland", "flag": "\ud83c\uddeb\ud83c\uddee"}, {"id": "portti", "collection": "nls-topographic", "title": "portti", "materialized": false, "item_type": "feature", "publisher": "National Land Survey of Finland", "flag": "\ud83c\uddeb\ud83c\uddee"}, {"id": "puisto", "collection": "nls-topographic", "title": "puisto", "materialized": false, "item_type": "feature", "publisher": "National Land Survey of Finland", "flag": "\ud83c\uddeb\ud83c\uddee"}, {"id": "puu", "collection": "nls-topographic", "title": "puu", "materialized": false, "item_type": "feature", "publisher": "National Land Survey of Finland", "flag": "\ud83c\uddeb\ud83c\uddee"}, {"id": "puurivi", "collection": "nls-topographic", "title": "puurivi", "materialized": false, "item_type": "feature", "publisher": "National Land Survey of Finland", "flag": "\ud83c\uddeb\ud83c\uddee"}, {"id": "rajavyohykkeentakaraja", "collection": "nls-topographic", "title": "rajavyohykkeentakaraja", "materialized": false, "item_type": "feature", "publisher": "National Land Survey of Finland", "flag": "\ud83c\uddeb\ud83c\uddee"}, {"id": "rakennelma", "collection": "nls-topographic", "title": "rakennelma", "materialized": false, "item_type": "feature", "publisher": "National Land Survey of Finland", "flag": "\ud83c\uddeb\ud83c\uddee"}, {"id": "rakennus", "collection": "nls-topographic", "title": "rakennus", "materialized": false, "item_type": "feature", "publisher": "National Land Survey of Finland", "flag": "\ud83c\uddeb\ud83c\uddee"}, {"id": "rakennusreunaviiva", "collection": "nls-topographic", "title": "rakennusreunaviiva", "materialized": false, "item_type": "feature", "publisher": "National Land Survey of Finland", "flag": "\ud83c\uddeb\ud83c\uddee"}, {"id": "rauhoitettukohde", "collection": "nls-topographic", "title": "rauhoitettukohde", "materialized": false, "item_type": "feature", "publisher": "National Land Survey of Finland", "flag": "\ud83c\uddeb\ud83c\uddee"}, {"id": "rautatie", "collection": "nls-topographic", "title": "rautatie", "materialized": false, "item_type": "feature", "publisher": "National Land Survey of Finland", "flag": "\ud83c\uddeb\ud83c\uddee"}, {"id": "rautatieliikennepaikka", "collection": "nls-topographic", "title": "rautatieliikennepaikka", "materialized": false, "item_type": "feature", "publisher": "National Land Survey of Finland", "flag": "\ud83c\uddeb\ud83c\uddee"}, {"id": "rautatiensymboli", "collection": "nls-topographic", "title": "rautatiensymboli", "materialized": false, "item_type": "feature", "publisher": "National Land Survey of Finland", "flag": "\ud83c\uddeb\ud83c\uddee"}, {"id": "retkeilyalue", "collection": "nls-topographic", "title": "retkeilyalue", "materialized": false, "item_type": "feature", "publisher": "National Land Survey of Finland", "flag": "\ud83c\uddeb\ud83c\uddee"}, {"id": "sahkolinjansymboli", "collection": "nls-topographic", "title": "sahkolinjansymboli", "materialized": false, "item_type": "feature", "publisher": "National Land Survey of Finland", "flag": "\ud83c\uddeb\ud83c\uddee"}, {"id": "satamaalue", "collection": "nls-topographic", "title": "satamaalue", "materialized": false, "item_type": "feature", "publisher": "National Land Survey of Finland", "flag": "\ud83c\uddeb\ud83c\uddee"}, {"id": "savupiippu", "collection": "nls-topographic", "title": "savupiippu", "materialized": false, "item_type": "feature", "publisher": "National Land Survey of Finland", "flag": "\ud83c\uddeb\ud83c\uddee"}, {"id": "savupiipunkorkeus", "collection": "nls-topographic", "title": "savupiipunkorkeus", "materialized": false, "item_type": "feature", "publisher": "National Land Survey of Finland", "flag": "\ud83c\uddeb\ud83c\uddee"}, {"id": "selite", "collection": "nls-topographic", "title": "selite", "materialized": false, "item_type": "feature", "publisher": "National Land Survey of Finland", "flag": "\ud83c\uddeb\ud83c\uddee"}, {"id": "sisaistenaluevesienulkoraja", "collection": "nls-topographic", "title": "sisaistenaluevesienulkoraja", "materialized": false, "item_type": "feature", "publisher": "National Land Survey of Finland", "flag": "\ud83c\uddeb\ud83c\uddee"}, {"id": "soistuma", "collection": "nls-topographic", "title": "soistuma", "materialized": false, "item_type": "feature", "publisher": "National Land Survey of Finland", "flag": "\ud83c\uddeb\ud83c\uddee"}, {"id": "sulkuportti", "collection": "nls-topographic", "title": "sulkuportti", "materialized": false, "item_type": "feature", "publisher": "National Land Survey of Finland", "flag": "\ud83c\uddeb\ud83c\uddee"}, {"id": "suo", "collection": "nls-topographic", "title": "suo", "materialized": false, "item_type": "feature", "publisher": "National Land Survey of Finland", "flag": "\ud83c\uddeb\ud83c\uddee"}, {"id": "suojaalue", "collection": "nls-topographic", "title": "suojaalue", "materialized": false, "item_type": "feature", "publisher": "National Land Survey of Finland", "flag": "\ud83c\uddeb\ud83c\uddee"}, {"id": "suojaalueenreunaviiva", "collection": "nls-topographic", "title": "suojaalueenreunaviiva", "materialized": false, "item_type": "feature", "publisher": "National Land Survey of Finland", "flag": "\ud83c\uddeb\ud83c\uddee"}, {"id": "suojametsa", "collection": "nls-topographic", "title": "suojametsa", "materialized": false, "item_type": "feature", "publisher": "National Land Survey of Finland", "flag": "\ud83c\uddeb\ud83c\uddee"}, {"id": "suojametsanreunaviiva", "collection": "nls-topographic", "title": "suojametsanreunaviiva", "materialized": false, "item_type": "feature", "publisher": "National Land Survey of Finland", "flag": "\ud83c\uddeb\ud83c\uddee"}, {"id": "suojanne", "collection": "nls-topographic", "title": "suojanne", "materialized": false, "item_type": "feature", "publisher": "National Land Survey of Finland", "flag": "\ud83c\uddeb\ud83c\uddee"}, {"id": "suojelualueenreunaviiva", "collection": "nls-topographic", "title": "suojelualueenreunaviiva", "materialized": false, "item_type": "feature", "publisher": "National Land Survey of Finland", "flag": "\ud83c\uddeb\ud83c\uddee"}, {"id": "suurjannitelinjanpylvas", "collection": "nls-topographic", "title": "suurjannitelinjanpylvas", "materialized": false, "item_type": "feature", "publisher": "National Land Survey of Finland", "flag": "\ud83c\uddeb\ud83c\uddee"}, {"id": "syvyyskayra", "collection": "nls-topographic", "title": "syvyyskayra", "materialized": false, "item_type": "feature", "publisher": "National Land Survey of Finland", "flag": "\ud83c\uddeb\ud83c\uddee"}, {"id": "syvyyskayransyvyysarvo", "collection": "nls-topographic", "title": "syvyyskayransyvyysarvo", "materialized": false, "item_type": "feature", "publisher": "National Land Survey of Finland", "flag": "\ud83c\uddeb\ud83c\uddee"}, {"id": "syvyyspiste", "collection": "nls-topographic", "title": "syvyyspiste", "materialized": false, "item_type": "feature", "publisher": "National Land Survey of Finland", "flag": "\ud83c\uddeb\ud83c\uddee"}, {"id": "taajaanrakennettualue", "collection": "nls-topographic", "title": "taajaanrakennettualue", "materialized": false, "item_type": "feature", "publisher": "National Land Survey of Finland", "flag": "\ud83c\uddeb\ud83c\uddee"}, {"id": "taajaanrakennetunalueenreuna", "collection": "nls-topographic", "title": "taajaanrakennetunalueenreuna", "materialized": false, "item_type": "feature", "publisher": "National Land Survey of Finland", "flag": "\ud83c\uddeb\ud83c\uddee"}, {"id": "taytemaa", "collection": "nls-topographic", "title": "taytemaa", "materialized": false, "item_type": "feature", "publisher": "National Land Survey of Finland", "flag": "\ud83c\uddeb\ud83c\uddee"}, {"id": "tervahauta", "collection": "nls-topographic", "title": "tervahauta", "materialized": false, "item_type": "feature", "publisher": "National Land Survey of Finland", "flag": "\ud83c\uddeb\ud83c\uddee"}, {"id": "tienroteksti", "collection": "nls-topographic", "title": "tienroteksti", "materialized": false, "item_type": "feature", "publisher": "National Land Survey of Finland", "flag": "\ud83c\uddeb\ud83c\uddee"}, {"id": "tiesymboli", "collection": "nls-topographic", "title": "tiesymboli", "materialized": false, "item_type": "feature", "publisher": "National Land Survey of Finland", "flag": "\ud83c\uddeb\ud83c\uddee"}, {"id": "tieviiva", "collection": "nls-topographic", "title": "tieviiva", "materialized": false, "item_type": "feature", "publisher": "National Land Survey of Finland", "flag": "\ud83c\uddeb\ud83c\uddee"}, {"id": "tulentekopaikka", "collection": "nls-topographic", "title": "tulentekopaikka", "materialized": false, "item_type": "feature", "publisher": "National Land Survey of Finland", "flag": "\ud83c\uddeb\ud83c\uddee"}, {"id": "tulvaalue", "collection": "nls-topographic", "title": "tulvaalue", "materialized": false, "item_type": "feature", "publisher": "National Land Survey of Finland", "flag": "\ud83c\uddeb\ud83c\uddee"}, {"id": "tunnelinaukko", "collection": "nls-topographic", "title": "tunnelinaukko", "materialized": false, "item_type": "feature", "publisher": "National Land Survey of Finland", "flag": "\ud83c\uddeb\ud83c\uddee"}, {"id": "turvalaite", "collection": "nls-topographic", "title": "turvalaite", "materialized": false, "item_type": "feature", "publisher": "National Land Survey of Finland", "flag": "\ud83c\uddeb\ud83c\uddee"}, {"id": "tuulivoimala", "collection": "nls-topographic", "title": "tuulivoimala", "materialized": false, "item_type": "feature", "publisher": "National Land Survey of Finland", "flag": "\ud83c\uddeb\ud83c\uddee"}, {"id": "uittolaite", "collection": "nls-topographic", "title": "uittolaite", "materialized": false, "item_type": "feature", "publisher": "National Land Survey of Finland", "flag": "\ud83c\uddeb\ud83c\uddee"}, {"id": "uittoranni", "collection": "nls-topographic", "title": "uittoranni", "materialized": false, "item_type": "feature", "publisher": "National Land Survey of Finland", "flag": "\ud83c\uddeb\ud83c\uddee"}, {"id": "ulkojasisasaaristonraja", "collection": "nls-topographic", "title": "ulkojasisasaaristonraja", "materialized": false, "item_type": "feature", "publisher": "National Land Survey of Finland", "flag": "\ud83c\uddeb\ud83c\uddee"}, {"id": "urheilujavirkistysalue", "collection": "nls-topographic", "title": "urheilujavirkistysalue", "materialized": false, "item_type": "feature", "publisher": "National Land Survey of Finland", "flag": "\ud83c\uddeb\ud83c\uddee"}, {"id": "valtakunnanrajapyykki", "collection": "nls-topographic", "title": "valtakunnanrajapyykki", "materialized": false, "item_type": "feature", "publisher": "National Land Survey of Finland", "flag": "\ud83c\uddeb\ud83c\uddee"}, {"id": "varastoalue", "collection": "nls-topographic", "title": "varastoalue", "materialized": false, "item_type": "feature", "publisher": "National Land Survey of Finland", "flag": "\ud83c\uddeb\ud83c\uddee"}, {"id": "vedenpinnankorkeusluku", "collection": "nls-topographic", "title": "vedenpinnankorkeusluku", "materialized": false, "item_type": "feature", "publisher": "National Land Survey of Finland", "flag": "\ud83c\uddeb\ud83c\uddee"}, {"id": "vesiasteikko", "collection": "nls-topographic", "title": "vesiasteikko", "materialized": false, "item_type": "feature", "publisher": "National Land Survey of Finland", "flag": "\ud83c\uddeb\ud83c\uddee"}, {"id": "vesikivi", "collection": "nls-topographic", "title": "vesikivi", "materialized": false, "item_type": "feature", "publisher": "National Land Survey of Finland", "flag": "\ud83c\uddeb\ud83c\uddee"}, {"id": "vesikivikko", "collection": "nls-topographic", "title": "vesikivikko", "materialized": false, "item_type": "feature", "publisher": "National Land Survey of Finland", "flag": "\ud83c\uddeb\ud83c\uddee"}, {"id": "vesikulkuvayla", "collection": "nls-topographic", "title": "vesikulkuvayla", "materialized": false, "item_type": "feature", "publisher": "National Land Survey of Finland", "flag": "\ud83c\uddeb\ud83c\uddee"}, {"id": "vesikulkuvaylankulkusuunta", "collection": "nls-topographic", "title": "vesikulkuvaylankulkusuunta", "materialized": false, "item_type": "feature", "publisher": "National Land Survey of Finland", "flag": "\ud83c\uddeb\ud83c\uddee"}, {"id": "vesikulkuvaylanteksti", "collection": "nls-topographic", "title": "vesikulkuvaylanteksti", "materialized": false, "item_type": "feature", "publisher": "National Land Survey of Finland", "flag": "\ud83c\uddeb\ud83c\uddee"}, {"id": "vesikuoppa", "collection": "nls-topographic", "title": "vesikuoppa", "materialized": false, "item_type": "feature", "publisher": "National Land Survey of Finland", "flag": "\ud83c\uddeb\ud83c\uddee"}, {"id": "vesitorni", "collection": "nls-topographic", "title": "vesitorni", "materialized": false, "item_type": "feature", "publisher": "National Land Survey of Finland", "flag": "\ud83c\uddeb\ud83c\uddee"}, {"id": "viettoviiva", "collection": "nls-topographic", "title": "viettoviiva", "materialized": false, "item_type": "feature", "publisher": "National Land Survey of Finland", "flag": "\ud83c\uddeb\ud83c\uddee"}, {"id": "virtausnuoli", "collection": "nls-topographic", "title": "virtausnuoli", "materialized": false, "item_type": "feature", "publisher": "National Land Survey of Finland", "flag": "\ud83c\uddeb\ud83c\uddee"}, {"id": "virtavesialue", "collection": "nls-topographic", "title": "virtavesialue", "materialized": false, "item_type": "feature", "publisher": "National Land Survey of Finland", "flag": "\ud83c\uddeb\ud83c\uddee"}, {"id": "virtavesikapea", "collection": "nls-topographic", "title": "virtavesikapea", "materialized": false, "item_type": "feature", "publisher": "National Land Survey of Finland", "flag": "\ud83c\uddeb\ud83c\uddee"}, {"id": "corine-land-cover", "collection": "syke", "title": "CORINE land cover 2018", "materialized": false, "item_type": "coverage", "publisher": "Finnish Environment Institute (SYKE)", "flag": "\ud83c\uddeb\ud83c\uddee"}, {"id": "natura2000", "collection": "syke", "title": "Natura 2000 protected areas", "materialized": false, "item_type": "feature", "publisher": "Finnish Environment Institute (SYKE)", "flag": "\ud83c\uddeb\ud83c\uddee"}, {"id": "tulvavaarakartta", "collection": "syke", "title": "Flood hazard maps", "materialized": false, "item_type": "feature", "publisher": "Finnish Environment Institute (SYKE)", "flag": "\ud83c\uddeb\ud83c\uddee"}]}
+{
+ "total": 18,
+ "publishers": [
+  {
+   "publisher": "National Land Survey of Finland",
+   "flag": "🇫🇮",
+   "n": 5
+  },
+  {
+   "publisher": "Copernicus / European Union",
+   "flag": "🇪🇺",
+   "n": 2
+  },
+  {
+   "publisher": "Finnish Environment Institute (SYKE)",
+   "flag": "🇫🇮",
+   "n": 3
+  },
+  {
+   "publisher": "Statistics Finland",
+   "flag": "🇫🇮",
+   "n": 2
+  },
+  {
+   "publisher": "Location Finland",
+   "flag": "🇫🇮",
+   "n": 2
+  },
+  {
+   "publisher": "Helsinki Region Environmental Services (HSY)",
+   "flag": "🇫🇮",
+   "n": 1
+  },
+  {
+   "publisher": "Fingrid",
+   "flag": "🇫🇮",
+   "n": 1
+  },
+  {
+   "publisher": "Eurostat",
+   "flag": "🇪🇺",
+   "n": 1
+  },
+  {
+   "publisher": "Overture Maps Foundation",
+   "flag": "🌍",
+   "n": 1
+  }
+ ],
+ "datasets": [
+  {
+   "id": "ndvi",
+   "collection": "copernicus-sentinel2",
+   "title": "Sentinel-2 NDVI",
+   "item_type": "coverage",
+   "publisher": "Copernicus / European Union",
+   "flag": "🇪🇺",
+   "answers": null,
+   "representation": "raquet raster",
+   "kind": "raster"
+  },
+  {
+   "id": "urbanatlas",
+   "collection": "copernicus-urbanatlas",
+   "title": "Urban Atlas land use",
+   "item_type": "feature",
+   "publisher": "Copernicus / European Union",
+   "flag": "🇪🇺",
+   "answers": null,
+   "representation": "Iceberg table",
+   "kind": "iceberg"
+  },
+  {
+   "id": "electricity_prices",
+   "collection": "eurostat-energy",
+   "title": "Industrial electricity price",
+   "item_type": "table",
+   "publisher": "Eurostat",
+   "flag": "🇪🇺",
+   "answers": null,
+   "representation": "Iceberg table · non-spatial",
+   "kind": "iceberg"
+  },
+  {
+   "id": "electricity_consumption",
+   "collection": "fingrid-grid",
+   "title": "Electricity consumption (national grid load)",
+   "item_type": "timeseries",
+   "publisher": "Fingrid",
+   "flag": "🇫🇮",
+   "answers": null,
+   "representation": "Iceberg table · non-spatial",
+   "kind": "iceberg"
+  },
+  {
+   "id": "seuturamava_kortteli",
+   "collection": "hsy-maankaytto",
+   "title": "Zoning · building-rights reserve",
+   "item_type": "feature",
+   "publisher": "Helsinki Region Environmental Services (HSY)",
+   "flag": "🇫🇮",
+   "answers": null,
+   "representation": "Iceberg table",
+   "kind": "iceberg"
+  },
+  {
+   "id": "temperature",
+   "collection": "lf-climate",
+   "title": "Mean annual air temperature",
+   "item_type": "coverage",
+   "publisher": "Location Finland",
+   "flag": "🇫🇮",
+   "answers": null,
+   "representation": "raquet raster",
+   "kind": "raster"
+  },
+  {
+   "id": "ykr_urban_structure",
+   "collection": "lf-ykr",
+   "title": "Urban-structure zones (YKR)",
+   "item_type": "feature",
+   "publisher": "Location Finland",
+   "flag": "🇫🇮",
+   "answers": null,
+   "representation": "Iceberg table",
+   "kind": "iceberg"
+  },
+  {
+   "id": "korkeusmalli_2m",
+   "collection": "nls-elevation",
+   "title": "Elevation model — 2 m laser DEM",
+   "item_type": "coverage",
+   "publisher": "National Land Survey of Finland",
+   "flag": "🇫🇮",
+   "answers": null,
+   "representation": "raquet raster",
+   "kind": "raster"
+  },
+  {
+   "id": "jarvi",
+   "collection": "nls-topographic",
+   "title": "Lakes & water bodies",
+   "item_type": "feature",
+   "publisher": "National Land Survey of Finland",
+   "flag": "🇫🇮",
+   "answers": null,
+   "representation": "Iceberg table",
+   "kind": "iceberg"
+  },
+  {
+   "id": "luonnonsuojelualue",
+   "collection": "nls-topographic",
+   "title": "Protected nature areas",
+   "item_type": "feature",
+   "publisher": "National Land Survey of Finland",
+   "flag": "🇫🇮",
+   "answers": null,
+   "representation": "Iceberg table",
+   "kind": "iceberg"
+  },
+  {
+   "id": "rakennus",
+   "collection": "nls-topographic",
+   "title": "Buildings",
+   "item_type": "feature",
+   "publisher": "National Land Survey of Finland",
+   "flag": "🇫🇮",
+   "answers": null,
+   "representation": "Iceberg table",
+   "kind": "iceberg"
+  },
+  {
+   "id": "sahkolinja",
+   "collection": "nls-topographic",
+   "title": "Electricity transmission lines",
+   "item_type": "feature",
+   "publisher": "National Land Survey of Finland",
+   "flag": "🇫🇮",
+   "answers": null,
+   "representation": "Iceberg table",
+   "kind": "iceberg"
+  },
+  {
+   "id": "places",
+   "collection": "overture-places",
+   "title": "Points of interest",
+   "item_type": "feature",
+   "publisher": "Overture Maps Foundation",
+   "flag": "🌍",
+   "answers": null,
+   "representation": "remote GeoParquet",
+   "kind": "remote"
+  },
+  {
+   "id": "paavo_vaesto",
+   "collection": "statfi-paavo",
+   "title": "Postal-area demographics",
+   "item_type": "feature",
+   "publisher": "Statistics Finland",
+   "flag": "🇫🇮",
+   "answers": null,
+   "representation": "Iceberg table",
+   "kind": "iceberg"
+  },
+  {
+   "id": "vaestoruutu_1km",
+   "collection": "statfi-vaesto",
+   "title": "Population grid · 1 km",
+   "item_type": "feature",
+   "publisher": "Statistics Finland",
+   "flag": "🇫🇮",
+   "answers": null,
+   "representation": "Iceberg table",
+   "kind": "iceberg"
+  },
+  {
+   "id": "natura2000",
+   "collection": "syke",
+   "title": "Natura 2000 sites",
+   "item_type": "feature",
+   "publisher": "Finnish Environment Institute (SYKE)",
+   "flag": "🇫🇮",
+   "answers": null,
+   "representation": "Iceberg table",
+   "kind": "iceberg"
+  },
+  {
+   "id": "pohjavesialue",
+   "collection": "syke",
+   "title": "Classified groundwater areas",
+   "item_type": "feature",
+   "publisher": "Finnish Environment Institute (SYKE)",
+   "flag": "🇫🇮",
+   "answers": null,
+   "representation": "Iceberg table",
+   "kind": "iceberg"
+  },
+  {
+   "id": "tulvavaarakartta",
+   "collection": "syke",
+   "title": "Flood-hazard zones",
+   "item_type": "feature",
+   "publisher": "Finnish Environment Institute (SYKE)",
+   "flag": "🇫🇮",
+   "answers": null,
+   "representation": "Iceberg table",
+   "kind": "iceberg"
+  }
+ ]
+}

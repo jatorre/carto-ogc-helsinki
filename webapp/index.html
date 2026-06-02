@@ -10,7 +10,7 @@
 <div class="hero">
   <div class="kick">An experiment · the future SDI</div>
   <h1>Ask Finland's data<br>a question.</h1>
-  <p>A small experiment in what a modern spatial data infrastructure could be. We took three of Finland's data publishers and re-exposed their catalogues in a cloud-native, self-describing format — <b>Apache Iceberg + STAC</b> on sovereign storage — then made them answerable by an agent in plain language. Not a production system; a glimpse of what federating catalogues this way enables. Hosted in Finland on European, sovereign infrastructure — open formats, no proprietary portal.</p>
+  <p>A small experiment in what a modern spatial data infrastructure could be. We took data publishers across Finland, the EU and the globe and re-exposed their catalogues in a cloud-native, self-describing format — <b>Apache Iceberg + STAC</b> on sovereign storage — then made them answerable by an agent in plain language. Not a production system; a glimpse of what federating catalogues this way enables. Hosted in Finland on European, sovereign infrastructure — open formats, no proprietary portal.</p>
   <div class="pills" id="pills"></div>
   <p style="margin-top:24px"><a class="btn" href="app.html">Try it — ask about a location →</a></p>
 </div>
@@ -21,39 +21,38 @@
     <input class="search" id="search" placeholder="Search all datasets…">
   </div>
   <div class="pubs" id="pubs"></div>
-  <h3 class="sec2" id="hmat">● Materialized — cloud-native, ready to query</h3>
-  <div class="grid" id="gmat"></div>
-  <h3 class="sec2" id="hcat">Catalogued — convert on demand</h3>
-  <div class="chips2" id="gcat"></div>
+  <h3 class="sec2">Datasets — every one published &amp; queryable</h3>
+  <div class="grid" id="grid"></div>
 </div>
 
 <script>
 let DATA=[];
+const STY={iceberg:'background:rgba(22,224,200,.16);color:var(--cyan)',
+           raster:'background:rgba(255,200,87,.16);color:var(--amber)',
+           remote:'background:rgba(3,111,226,.16);color:var(--blue)'};
 fetch('data/catalog.json').then(r=>r.json()).then(d=>{
   DATA=d.datasets;
-  document.getElementById('meta').innerHTML=`An experiment exposing <b style="color:var(--cyan)">${d.publishers.length} publishers'</b> catalogues in one cloud-native format · ${d.total} datasets indexed · ${d.materialized} converted to cloud-native so far, the rest catalogued & convertible on demand`;
+  document.getElementById('meta').innerHTML=`<b style="color:var(--cyan)">${d.publishers.length} publishers</b> federated in one cloud-native format · ${d.total} datasets — <b>every one published &amp; queryable</b> (no portal, no convert-on-demand)`;
   const pp=document.getElementById('pubs');
-  d.publishers.sort((a,b)=>b.materialized-a.materialized).forEach(p=>{
+  d.publishers.forEach(p=>{
     const e=document.createElement('div');e.className='pubcard';
-    const status=p.materialized?`<b>${p.materialized} materialized</b>`:`<b style="color:var(--amber)">catalogued · convert on demand</b>`;
     e.innerHTML=`<div class="pn"><span class="pf">${p.flag}</span>${p.publisher}</div>
-      <div class="pm">${p.n} dataset${p.n>1?'s':''} · ${status}</div>`;pp.appendChild(e);});
+      <div class="pm">${p.n} dataset${p.n>1?'s':''} · <b>published</b></div>`;pp.appendChild(e);});
   const pl=document.getElementById('pills');
-  [['3','publishers federated'],['STAC','stac-geoparquet index'],['Iceberg','on object storage'],['🇫🇮 🇪🇺','European sovereign infra']].forEach(([b,t])=>{
+  [[d.publishers.length,'publishers federated'],['STAC','stac-geoparquet index'],
+   ['Iceberg','tables + remote GeoParquet'],['🇫🇮 🇪🇺 🌍','sovereign-first, federated']].forEach(([b,t])=>{
     const e=document.createElement('div');e.className='pill';e.innerHTML=`<b>${b}</b> ${t}`;pl.appendChild(e);});
   render('');
 });
 document.getElementById('search').oninput=e=>render(e.target.value.toLowerCase());
-function match(d,q){return !q||((d.id||'')+(d.title||'')+(d.publisher||'')).toLowerCase().includes(q);}
+function match(d,q){return !q||((d.id||'')+(d.title||'')+(d.publisher||'')+(d.representation||'')).toLowerCase().includes(q);}
 function render(q){
-  const gm=document.getElementById('gmat'),gc=document.getElementById('gcat');gm.innerHTML='';gc.innerHTML='';
-  const mat=DATA.filter(d=>d.materialized&&match(d,q)), cat=DATA.filter(d=>!d.materialized&&match(d,q));
-  mat.forEach(d=>{const c=document.createElement('div');c.className='card';
-    c.innerHTML=`<div class="id">${d.id}</div><div class="ti">${d.title}</div>
+  const g=document.getElementById('grid');g.innerHTML='';
+  DATA.filter(d=>match(d,q)).forEach(d=>{
+    const c=document.createElement('div');c.className='card';
+    c.innerHTML=`<div class="id">${d.id}</div><div class="ti">${d.title||''}</div>
       <div class="pub">${d.flag} ${d.publisher}</div>
-      <div class="row"><span class="tag mat">● ${d.item_type==='coverage'?'raster':'vector'} · cloud-native</span></div>`;gm.appendChild(c);});
-  cat.forEach(d=>{const e=document.createElement('div');e.className='chip2';e.textContent=d.id;e.title=`${d.publisher} · ${d.item_type}`;gc.appendChild(e);});
-  document.getElementById('hcat').innerHTML=`Catalogued — convert on demand <span style="color:var(--muted);font-weight:400">(${cat.length})</span>`;
-  document.getElementById('hmat').style.display=mat.length?'':'none';
+      <div class="row"><span class="tag" style="${STY[d.kind]||''}">${d.representation}</span></div>`;
+    g.appendChild(c);});
 }
 </script></body></html>

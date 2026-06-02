@@ -43,8 +43,8 @@ python3 -m http.server 8765
 |---|---|
 | [`index.html`](index.html) | The 10-slide deck (reveal.js, vendored — offline-ready). Each slide is a 16:9 frame of the source Google Slides; the full speaker script is in the presenter notes. |
 | [`slides/img/`](slides/img/) | The committed 16:9 slide images. |
-| [`webapp/`](webapp/) | Precomputed demo site: `index.html` (federation index of 133 datasets) + `app.html` (the scripted Q&A with map). Serves committed `webapp/data/*.json` — no backend. |
-| [`.claude/skills/sdi/`](.claude/skills/sdi/) | The `sdi` Claude skill — `SKILL.md` (generic progressive-discovery loop) + `catalogs.md` (the catalog registry). The agent attaches the catalogs, reads each dataset's metadata (incl. a runnable `example_query`), queries with the DuckDB CLI, and builds an HTML artifact — live. |
+| [`webapp/`](webapp/) | Precomputed demo site: `index.html` (federation index of 18 datasets across 9 publishers) + `app.html` (the scripted Q&A with map). Serves committed `webapp/data/*.json` — no backend. |
+| [`.claude/skills/sdi/`](.claude/skills/sdi/) | The `sdi` Claude skill — `SKILL.md` (generic progressive-discovery loop) + `catalogs.md` (the catalog registry). The agent attaches the catalogs, reads each dataset's metadata (OSI semantics + schema) and **composes its own query**, runs it with the DuckDB CLI, and builds an HTML artifact — live. (A `query_hint` ships only for genuinely tricky access — raquet rasters and the remote Overture GeoParquet.) |
 | [`demo/build_iceberg_catalog.py`](demo/build_iceberg_catalog.py) | Builds the static GeoIceberg/STAC catalog published to UpCloud. |
 | [`demo/ingest_official.py`](demo/ingest_official.py) | Pulls official NLS/SYKE/Copernicus source data (needs a local API key, not committed). |
 

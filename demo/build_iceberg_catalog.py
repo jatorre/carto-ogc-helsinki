@@ -30,7 +30,7 @@ from testbed._static_catalog import write_static_catalog  # noqa: E402
 BUCKET = "carto-ogc-connect-helsinki"
 PREFIX = "catalog"
 BASE_URI = f"https://8et4c.upcloudobjects.com/{BUCKET}/{PREFIX}"
-EXTRA = f"{BASE_URI}/data/extra"   # materialized cloud-native GeoParquet files (gpio output, native geom)
+EXTRA = f"https://8et4c.upcloudobjects.com/{BUCKET}/sources/extra"  # converter build INPUTS (source GeoParquet from ingest), kept OUT of the public catalog/ surface
 IRC_PREFIX = "sdi"
 STAGING = Path("/tmp/sdi_catalog")
 SRC = Path("/tmp")

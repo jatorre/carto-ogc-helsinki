@@ -23,8 +23,8 @@ Published via **GitHub Pages** at `https://jatorre.github.io/carto-ogc-helsinki/
 
 ## The demo (`webapp/`)
 - Static site, **precomputed snapshot** of one skill run: `index.html` (federation index of
-  133 datasets) + `app.html` (scripted Q&A with a MapLibre map). Both read committed
-  `webapp/data/{catalog,scenario}.json` — no backend, no build step.
+  18 datasets across 9 publishers) + `app.html` (scripted Q&A with a MapLibre map). Both read
+  committed `webapp/data/{catalog,scenario}.json` — no backend, no build step.
 - The catalog lives on a **public, anonymous** UpCloud bucket
   (`https://8et4c.upcloudobjects.com/carto-ogc-connect-helsinki/catalog`, `AUTHORIZATION_TYPE 'none'`),
   so the demo needs no credentials. To rebuild/republish the catalog itself, use
