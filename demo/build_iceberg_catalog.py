@@ -63,12 +63,9 @@ def _ext(t):
     return (pc.min(t["fp_xmin"]).as_py(), pc.min(t["fp_ymin"]).as_py(),
             pc.max(t["fp_xmax"]).as_py(), pc.max(t["fp_ymax"]).as_py())
 def _props(info, variant):
-    sem = dict(info["semantics"])
-    sem["query_recipe"] = (
-        "nearest distance (m): ST_Distance(ST_Transform(ST_GeomFromWKB(geom_wkb),'EPSG:4326','EPSG:3067'), site_3067)"
-        if variant == "v2" else
-        "nearest distance (m): ST_Distance(ST_Transform(geom,'EPSG:4326','EPSG:3067'), site_3067)")
-    return {"theme": info["theme"], "title": info["title"], "semantics": json.dumps(sem)}
+    # vector tables carry only semantics (what they are) + geo metadata; the agent writes
+    # its own spatial SQL — no query recipe shipped for these straightforward cases.
+    return {"theme": info["theme"], "title": info["title"], "semantics": json.dumps(info["semantics"])}
 
 
 def build_v2(name, info):
@@ -230,7 +227,10 @@ def _wkb_box(x0, y0, x1, y1):
 _GRID = ("WITH grid AS (SELECT :lon+(i-3)*0.0009 lon, :lat+(j-3)*0.00045 lat "
          "FROM range(0,7) a(i), range(0,7) b(j)) ")
 def _example_query(mat):
-    if not mat:
+    # Hints are ONLY for tricky cloud-native access patterns the agent wouldn't reasonably
+    # guess — i.e. raquet rasters (block/quadbin sampling). For everything else the agent
+    # composes its own query from the schema + GeoParquet geo-metadata + OSI semantics.
+    if not mat or mat[2] != "raquet":
         return None
     kind, val, _fmt = mat
     if kind == "table":  # Iceberg vector table (GeoParquet, WKB) — nearest distance in metric CRS
@@ -325,17 +325,22 @@ def collect_rows():
         R["xmin"].append(x0); R["ymin"].append(y0); R["xmax"].append(x1); R["ymax"].append(y1)
         R["datetime"].append(None)
         sem = SEM.get(cid)
+        is_raster = bool(mat) and mat[2] == "raquet"
         props = {
             "title": (sem[0] if sem else title), "description": ((sem[1] if sem else desc) or "")[:400],
             "keywords": kw.split("; ") if kw else [], "item_type": item_type, "crs": crs,
             "materialized": mat is not None, "data_format": (mat[2] if mat else None),
-            "access_recipe": (recipe if recipe else "convert on demand: publisher OGC API Features -> gpio -> bucket"),
             "provider": PROVIDER.get(publisher_of(coll), publisher_of(coll)),
-            "license": LICENSE.get(publisher_of(coll), "CC-BY-4.0"),
-            "example_query": _example_query(mat)}
+            "license": LICENSE.get(publisher_of(coll), "CC-BY-4.0")}
         if sem:  # Open Semantic Interchange (OSI) block — what it means / answers / unit
             props["semantics"] = {"spec": "Open Semantic Interchange", "label": sem[0],
                                   "describes": sem[1], "answers": sem[2], "unit": sem[3]}
+        if mat is None:
+            props["availability"] = "catalogued · convert-on-demand"
+        if is_raster:  # tricky cloud-native raster (raquet) — ship a hint the agent wouldn't guess
+            props["access_recipe"] = recipe
+            props["query_hint"] = _example_query(mat)
+        # materialized vectors/tables carry NO query: the agent composes it from schema + geo + semantics
         R["properties"].append(json.dumps(props))
         R["stac_version"].append("1.1.0"); R["type"].append("Feature")
         R["publisher"].append(publisher_of(coll)); R["mat"].append(mat)

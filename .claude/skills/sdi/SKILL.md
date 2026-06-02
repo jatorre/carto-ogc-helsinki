@@ -23,13 +23,15 @@ queried by an open engine. No GIS server, no portal, no data copies.)*
 2. **Catalog → browse its datasets.** Attach the catalog (it gives the endpoint) and read
    its **STAC index** `catalog.datasets`. Each row is a dataset with rich metadata in
    `properties` and `assets`. Filter to what's relevant — don't assume names.
-3. **Dataset → read how to use it.** Inspect a candidate dataset's own metadata: it tells
-   you everything — `properties.materialized` (is the data published?), `assets.data.href`
-   (where it is — an Iceberg table ref or a raster URL), `properties.crs`,
-   `properties.access_recipe`, and a concrete **`properties.example_query`** you can run.
-   **The dataset describes how to query itself — read it; don't hardcode.**
-4. **Query.** Run the dataset's example query against the cloud-native data with DuckDB
-   (substitute the site `:lon`/`:lat` and your attach alias for `<catalog>`). Join across
+3. **Dataset → understand it.** Inspect a candidate dataset's metadata: `properties.materialized`
+   (is the data published?), `assets.data.href` (where it is — an Iceberg table ref or a raster
+   URL), `properties.crs`, the GeoParquet `geo` metadata (geometry column + encoding), and the
+   **OSI `properties.semantics`** block (what it describes / answers / its unit).
+4. **Query — write it yourself.** From the schema + geo-metadata + semantics, **compose your own
+   SQL** (e.g. for a GeoParquet vector: `ST_Distance` on `ST_GeomFromWKB(geom_wkb)`, transformed to
+   a metric CRS like EPSG:3067 for Finland). Only **tricky cloud-native formats carry a
+   `properties.query_hint`** — notably **raquet rasters** (`read_raquet` + `ST_RasterValue` +
+   `ST_GeomFromQuadbin` block sampling), which you won't guess; use it there. Join across
    datasets/publishers when a question needs it — geometry is just a column.
 5. **Synthesize.** Build a self-contained **HTML artifact** for the user: the finding in
    plain language, a metrics panel where **every figure shows its publisher + dataset +
@@ -50,7 +52,7 @@ CRS the dataset's metadata specifies (Finnish data → EPSG:3067).
 
 ## Composing answers across catalogs (this is the powerful part)
 Most real questions need **2–3 publishers joined by location or arithmetic**, not one lookup.
-Discover the relevant datasets, run each one's `example_query`, then combine. Patterns seen:
+Discover the relevant datasets, compose a query for each (use a `query_hint` only where one is shipped), then combine. Patterns seen:
 
 - **"Viability of this site?"** → the full screen: grid/water/protected (NLS) + flood/Natura/groundwater (SYKE) + land cover (Copernicus) + zoning (HSY) + climate (Location Finland).
 - **"What radius covers as many people as the data centre consumes?"** → DC load ÷ per-capita power → people-equivalent, then grow a radius over the **population grid** (Statistics Finland) until the cumulative population matches. *(per-capita ≈ Fingrid national load ÷ Finland population ≈ 1.55 kW/person; a ~100 MW DC ≈ 64,000 people ≈ everyone within ~4 km.)*
