@@ -33,10 +33,20 @@ Published via **GitHub Pages** at `https://jatorre.github.io/carto-ogc-helsinki/
 ## The `sdi` skill (`.claude/skills/sdi/`)
 The live demo. `SKILL.md` is a **generic progressive-discovery loop** (registry → catalog →
 dataset → query) and `catalogs.md` is the **catalog registry**. The agent attaches the
-Iceberg/STAC catalogs, discovers datasets, reads each dataset's own metadata (incl. a
-runnable `example_query`), queries with the DuckDB CLI, and builds an HTML site-assessment
-artifact — all live. Specifics (endpoints, schemas, query recipes) live in the catalog
-metadata, not the skill, so adding a publisher is just a new endpoint + a `catalogs.md` line.
+Iceberg/STAC catalogs, discovers datasets, reads each dataset's own metadata (OSI semantics +
+schema) and **composes its own query**, runs it with the DuckDB CLI, and builds an HTML
+site-assessment artifact — all live. A `query_hint` ships only for genuinely tricky access
+(raquet rasters, the remote Overture GeoParquet); everything else the agent works out itself.
+Specifics (endpoints, schemas) live in the catalog metadata, not the skill, so adding a
+publisher is just a new endpoint + a `catalogs.md` line.
+
+**Catalog representation rules (don't regress):** the index lists **only what's accessible**
+(every dataset has published data — no "catalogued / convert-on-demand" entries). If we
+transform a source we go **all the way to an Iceberg table** (`v2.*` vectors + `v3.*` native;
+`tab.*` for non-spatial) — never a half-way GeoParquet file. A source already published as
+cloud-native GeoParquet stays a **remote GeoParquet** (Overture, on its own S3). Rasters are
+raquet files. Converter build inputs live in the bucket's `sources/` prefix, **not** under
+`catalog/`.
 
 ## Claim framing — IMPORTANT, do not regress
 The deck and demo deliberately avoid overclaiming. When editing any user-facing copy:
@@ -44,8 +54,10 @@ The deck and demo deliberately avoid overclaiming. When editing any user-facing 
   country" (Copernicus + the AI model are EU, not in-country).
 - **Grid:** distance to a power line is "favorable proximity, subject to capacity and
   permitting" — never "cheap/excellent grid connection".
-- **Flood:** elevation/slope alone gives "no obvious topographic flood concern from the DEM;
-  SYKE flood maps would sharpen this" — never "low flood risk".
+- **Flood:** prefer **SYKE's flood-hazard zones** (now a queryable Iceberg table) — report
+  distance to / inside a mapped zone with its return period. Use the DEM only as a fallback
+  ("no obvious topographic flood concern from the DEM") — never infer "low flood risk" from
+  elevation alone.
 - **Provenance is the point:** every number must keep its publisher + re-runnable query.
 - Always frame the assessment as an **initial spatial screening, not a permitting decision.**
 
