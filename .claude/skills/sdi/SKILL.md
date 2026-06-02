@@ -10,16 +10,23 @@ datasets in advance — you discover them progressively, the way you'd explore a
 tools: start from the registry, narrow to a catalog, then to a dataset, reading metadata
 at each step. Everything specific (endpoints, schemas, how to query each dataset) lives
 **in the catalogs and their metadata** — this skill stays generic, so it works as the
-federation grows from today's three sources to many.
+federation grows from today's nine sources to many.
 
 *(Part of the **Portolan** project — open, agent-ready spatial data infrastructure.
 Everything runs on European, sovereign infrastructure: open files on object storage,
 queried by an open engine. No GIS server, no portal, no data copies.)*
 
 ## The progressive-discovery loop — narrate it out loud
-1. **Registry → pick a catalog.** Read **[`catalogs.md`](catalogs.md)**: the spatial data
-   infrastructures available and a description of what each holds. Choose the catalog(s)
-   whose description fits the question. (Today: 3 publishers; more over time.)
+1. **Registry → pick a catalog.** Fetch the **reference catalog of catalogs** — a STAC
+   `Catalog` on sovereign object storage at
+   `https://8et4c.upcloudobjects.com/carto-ogc-connect-helsinki/catalog/stac.json`. Each
+   `child` link is an independent publisher: its `href` is the Iceberg endpoint to attach,
+   with a `description` of what it holds and a `bbox` (WGS84) of its extent. Choose the
+   catalog(s) whose description fits the question — and, for a located question, **pre-filter
+   by `bbox`**: skip catalogs whose extent doesn't cover your point (a Helsinki site keeps the
+   Finnish catalogs + global Overture, drops nothing relevant). `bbox: null` = non-geospatial. (Adding a publisher = a new `child` link there; the skill doesn't change.
+   [`catalogs.md`](catalogs.md) is a human-readable mirror of the same registry.) Today:
+   9 publishers, 18 datasets; more over time.
 2. **Catalog → browse its datasets.** Attach the catalog (it gives the endpoint) and read
    its **STAC index** `catalog.datasets`. Each row is a dataset with rich metadata in
    `properties` and `assets`. Filter to what's relevant — don't assume names.

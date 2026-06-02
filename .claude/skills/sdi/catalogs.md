@@ -1,5 +1,10 @@
 # Catalog registry — the spatial data infrastructures you can reach
 
+> **Human-readable mirror.** The canonical, machine-readable registry is a STAC catalog of
+> catalogs at `https://8et4c.upcloudobjects.com/carto-ogc-connect-helsinki/catalog/stac.json`
+> (one `child` link per publisher, each `href` an Iceberg endpoint). This page mirrors it for
+> reading/review; the agent fetches the `stac.json`. Keep the two in sync when adding a publisher.
+
 > The **directory** the `sdi` skill reads first: *which catalogs exist and what each holds*,
 > so you can pick one. You don't get dataset-level detail here — once you choose a catalog,
 > **attach it and read its own STAC index** (`catalog.datasets`); each dataset carries its
