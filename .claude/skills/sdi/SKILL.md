@@ -24,14 +24,16 @@ queried by an open engine. No GIS server, no portal, no data copies.)*
    its **STAC index** `catalog.datasets`. Each row is a dataset with rich metadata in
    `properties` and `assets`. Filter to what's relevant — don't assume names.
 3. **Dataset → understand it.** Inspect a candidate dataset's metadata: `properties.materialized`
-   (is the data published?), `assets.data.href` (where it is — an Iceberg table ref or a raster
-   URL), `properties.crs`, the GeoParquet `geo` metadata (geometry column + encoding), and the
-   **OSI `properties.semantics`** block (what it describes / answers / its unit).
+   (is the data published?), `assets.data.href` (where it is — an Iceberg table ref `v2.<name>`
+   / `tab.<name>`, a raquet raster URL, or a remote GeoParquet URL), `properties.crs`, the
+   GeoParquet `geo` metadata (geometry column + encoding), and the **OSI `properties.semantics`**
+   block (what it describes / answers / its unit).
 4. **Query — write it yourself.** From the schema + geo-metadata + semantics, **compose your own
-   SQL** (e.g. for a GeoParquet vector: `ST_Distance` on `ST_GeomFromWKB(geom_wkb)`, transformed to
-   a metric CRS like EPSG:3067 for Finland). Only **tricky cloud-native formats carry a
-   `properties.query_hint`** — notably **raquet rasters** (`read_raquet` + `ST_RasterValue` +
-   `ST_GeomFromQuadbin` block sampling), which you won't guess; use it there. Join across
+   SQL** (e.g. for a vector Iceberg table: `ST_Distance` on `ST_GeomFromWKB(geom_wkb)`, transformed to
+   a metric CRS like EPSG:3067 for Finland). Only **genuinely tricky access patterns carry a
+   `properties.query_hint`** — **raquet rasters** (`read_raquet` + `ST_RasterValue` +
+   `ST_GeomFromQuadbin` block sampling) and the **remote Overture GeoParquet** (S3 secret + hive
+   partitioning + bbox prune), which you won't guess; use it there. Join across
    datasets/publishers when a question needs it — geometry is just a column.
 5. **Synthesize.** Build a self-contained **HTML artifact** for the user: the finding in
    plain language, a metrics panel where **every figure shows its publisher + dataset +
@@ -46,8 +48,9 @@ ATTACH '<alias>' (TYPE iceberg, ENDPOINT '<endpoint from catalogs.md>', AUTHORIZ
 -- then: SHOW ALL TABLES;  and  SELECT * FROM <alias>.catalog.datasets WHERE properties ILIKE '%<topic>%';
 ```
 Use the DuckDB **CLI**: `duckdb -unsigned -json -c "<sql>"` (the raquet community extension
-needs the CLI; `-unsigned` to load it). Vectors are GeoParquet (`v2.*`, WKB + bbox);
-rasters are raquet files (`read_raquet('<href>')`). For metric distance, transform to the
+needs the CLI; `-unsigned` to load it). Vectors are Iceberg tables (`v2.*`, WKB `geom_wkb` +
+bbox); non-spatial data is `tab.*`; rasters are raquet files (`read_raquet('<href>')`); a few
+sources are remote GeoParquet read in place. For metric distance, transform to the
 CRS the dataset's metadata specifies (Finnish data → EPSG:3067).
 
 ## Composing answers across catalogs (this is the powerful part)

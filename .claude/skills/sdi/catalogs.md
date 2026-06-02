@@ -12,13 +12,16 @@
 ## How catalogs work (applies to all of them)
 Each is an **Apache Iceberg** catalog on object storage (UpCloud, European / sovereign
 infrastructure 🇫🇮), attached anonymously with DuckDB. Each publishes its own **STAC index**
-table `catalog.datasets` (`stac-geoparquet`) listing **only its own datasets**. Per dataset,
-`properties.materialized = true` means cloud-native data is published; `assets.data.href`
-points to it (an Iceberg table like `v2.power_lines`, or a raster URL). Read the dataset's
-`properties.semantics` (OSI), `crs` and schema and **write your own query**. Only tricky
-cloud-native formats ship a `properties.query_hint` — notably **raquet rasters** (`read_raquet`
-+ `ST_RasterValue` + `ST_GeomFromQuadbin`), which you wouldn't guess. Otherwise the dataset is
-catalogued, **convert-on-demand**.
+table `catalog.datasets` (`stac-geoparquet`) listing **only its own datasets**. The index lists
+**only what is actually accessible** — every dataset has cloud-native data published
+(`properties.materialized = true`), and `assets.data.href` points to it. Three shapes:
+an **Iceberg table** — `v2.<name>` for vectors (WKB + bbox), `tab.<name>` for non-spatial
+tables (anything WE transformed is converted all the way to Iceberg); a **raquet raster file**;
+or a **remote GeoParquet** that the publisher already serves cloud-natively (e.g. Overture on
+its own public S3 — read in place, no copy). Read the dataset's `properties.semantics` (OSI),
+`crs` and schema and **write your own query**. Only genuinely tricky access patterns ship a
+`properties.query_hint` — **raquet rasters** (`read_raquet` + `ST_RasterValue` + `ST_GeomFromQuadbin`)
+and the **remote Overture GeoParquet** (S3 secret + hive partitioning + bbox prune) — which you wouldn't guess.
 
 ```sql
 ATTACH '<alias>' (TYPE iceberg, ENDPOINT '<endpoint>', AUTHORIZATION_TYPE 'none');
@@ -33,8 +36,9 @@ WHERE properties ILIKE '%<your topic>%';   -- match on generic keywords/semantic
 
 ### 🇫🇮 National Land Survey of Finland (Maanmittauslaitos)
 Authoritative topographic + elevation base data — the physical-infrastructure backbone:
-power lines, water bodies, protected areas, buildings, roads, land-cover features, and the
-2 m laser elevation model. **~129 datasets** (several materialized; the rest convert-on-demand).
+power lines, water bodies, protected areas, buildings, and the 2 m laser elevation model.
+**5 datasets**: `sahkolinja` (power lines), `jarvi` (lakes), `luonnonsuojelualue` (protected
+areas) and `rakennus` (buildings) as vectors, plus `korkeusmalli_2m` (2 m DEM, raquet raster).
 - **Attach as** `nls` · **endpoint** `https://8et4c.upcloudobjects.com/carto-ogc-connect-helsinki/catalog/national-land-survey`
 
 ### 🇪🇺 Copernicus (European Union)
@@ -45,10 +49,9 @@ Forests / urban fabric / industrial / …). NDVI gives the index; Urban Atlas gi
 - **Attach as** `cop` · **endpoint** `https://8et4c.upcloudobjects.com/carto-ogc-connect-helsinki/catalog/copernicus`
 
 ### 🇫🇮 Finnish Environment Institute (SYKE)
-Authoritative environmental / regulatory layers. **4 datasets — 3 materialized**:
-flood-hazard zones (`tulvavaarakartta`, inundation extent by return period), Natura 2000
-(`natura2000`, SAC+SPA), and classified groundwater areas (`pohjavesialue`, VHS2022).
-CORINE land cover is still convert-on-demand. (Clipped to the Helsinki-region AOI.)
+Authoritative environmental / regulatory layers. **3 datasets**: flood-hazard zones
+(`tulvavaarakartta`, inundation extent by return period), Natura 2000 (`natura2000`, SAC+SPA),
+and classified groundwater areas (`pohjavesialue`, VHS2022). (Clipped to the Helsinki-region AOI.)
 - **Attach as** `syke` · **endpoint** `https://8et4c.upcloudobjects.com/carto-ogc-connect-helsinki/catalog/finnish-environment-institute`
 
 ### 🏙️ Helsinki Region — HSY (regional)
@@ -88,13 +91,13 @@ country (Finland ≈ €0.085/kWh vs EU-27 ≈ €0.19); the agent composes a si
 - **Attach as** `eurostat` · **endpoint** `https://8et4c.upcloudobjects.com/carto-ogc-connect-helsinki/catalog/eurostat`
 
 ### 🌍 Overture Maps (global)
-**1 dataset, materialized**: `places` — points of interest from Overture's **planet-scale,
-cloud-native GeoParquet** catalog (we federated a slice into the bucket; the source is queried
-with DuckDB *exactly* like everything else here — the same pattern, at global scale). POI
-density / activity near the site.
+**1 dataset**: `places` — points of interest from Overture's **planet-scale, cloud-native
+GeoParquet** catalog. Overture already publishes GeoParquet, so we leave it as a **remote
+GeoParquet on Overture's own public S3** and query it *in place* with DuckDB — no copy, the
+same pattern as everything else, at global scale. POI density / activity near the site.
 - **Attach as** `overture` · **endpoint** `https://8et4c.upcloudobjects.com/carto-ogc-connect-helsinki/catalog/overture-maps`
 
-> A **combined** catalog also exists at `…/catalog` (all publishers, 143 datasets,
+> A **combined** catalog also exists at `…/catalog` (all publishers, 18 datasets,
 > vectors as `sdi.v2.*`) — the precomputed web demo uses it. For the **live agent demo,
 > prefer the three publisher endpoints above** — attaching them separately is the point:
 > a real federation of independent, sovereign sources.

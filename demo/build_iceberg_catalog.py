@@ -3,8 +3,9 @@
 UpCloud. Three layers:
   - v2/* : GeoIceberg V2 vector tables (WKB + flat bbox) — DuckDB-portable
   - v3/* : native V3 geometry vector tables (geoarrow) — Snowflake/CARTO
-  - catalog.datasets : a stac-geoparquet (STAC-in-Iceberg) index of ALL source
-    datasets (128 NLS + DEM + Sentinel), with a `materialized` flag.
+  - catalog.datasets : a stac-geoparquet (STAC-in-Iceberg) index listing ONLY the
+    datasets with cloud-native data actually published (assets.data.href). Sources
+    we haven't materialized are not catalogued — the index is what you can query.
 Reuses iceberg-geo-testbed's write_static_catalog.
 
 Run with the testbed venv (pyiceberg + geoarrow):
@@ -19,8 +20,8 @@ import pyarrow.parquet as pq
 import pyarrow.compute as pc
 import geoarrow.pyarrow as ga
 from pyiceberg.schema import Schema
-from pyiceberg.types import (NestedField, StringType, IntegerType, DoubleType,
-                             BinaryType, StructType, TimestamptzType)
+from pyiceberg.types import (NestedField, StringType, IntegerType, LongType, FloatType,
+                             DoubleType, BooleanType, BinaryType, StructType, TimestamptzType)
 
 TESTBED = Path("/Users/jatorre/workspace/iceberg-geo-testbed")
 sys.path.insert(0, str(TESTBED))
@@ -33,6 +34,8 @@ EXTRA = f"{BASE_URI}/data/extra"   # materialized cloud-native GeoParquet files 
 IRC_PREFIX = "sdi"
 STAGING = Path("/tmp/sdi_catalog")
 SRC = Path("/tmp")
+CONV = Path("/tmp/sdi_convert")   # scratch for GeoParquet→Iceberg normalization
+DUCKDB = "duckdb"                  # CLI (1.5.3) used to normalize source GeoParquet
 GEOM_EXT = ga.wkb().with_crs(ga.OGC_CRS84)
 
 def dle(v): return struct.pack("<d", float(v))
@@ -198,6 +201,130 @@ def build_v3(name, info):
     return _finalize(mp, VEC_DOC)
 
 
+# --- generic GeoParquet → Iceberg conversion --------------------------------
+# When WE transform a source, we go all the way to Iceberg tables (v2 WKB + v3 native),
+# exactly like the NLS vectors — never a half-way GeoParquet file. (A source that is
+# already cloud-native GeoParquet, e.g. Overture, is left as a remote GeoParquet.)
+def _ice_field(field, fid):
+    """Map a pyarrow field → (pyiceberg NestedField, Iceberg JSON field, 'iceberg-type')."""
+    t = field.type
+    if pa.types.is_boolean(t):                     it, js = BooleanType(), "boolean"
+    elif pa.types.is_int64(t):                      it, js = LongType(), "long"
+    elif pa.types.is_integer(t):                    it, js = IntegerType(), "int"
+    elif pa.types.is_float64(t):                   it, js = DoubleType(), "double"
+    elif pa.types.is_float32(t):                    it, js = FloatType(), "float"
+    elif pa.types.is_binary(t) or pa.types.is_large_binary(t): it, js = BinaryType(), "binary"
+    else:                                          it, js = StringType(), "string"  # incl. temporal (stringified)
+    return (NestedField(fid, field.name, it, required=False),
+            {"id": fid, "name": field.name, "required": False, "type": js})
+
+def _normalize(name, src_url, geom):
+    """Use the DuckDB CLI to read the source (Geo)Parquet and write a normalized parquet:
+    for geometry sources → attributes + geom_wkb (WKB) + flat fp_* bbox; for non-spatial →
+    the columns as-is. Then load it with pyarrow, drop the OGC_FID export artifact, and
+    stringify temporal columns (keeps the static-catalog writer to a simple type set)."""
+    CONV.mkdir(parents=True, exist_ok=True)
+    out = CONV / f"{name}.parquet"
+    if geom:
+        sel = ("SELECT * EXCLUDE(geom, bbox), ST_AsWKB(geom) AS geom_wkb, "
+               "bbox.xmin AS fp_xmin, bbox.ymin AS fp_ymin, bbox.xmax AS fp_xmax, bbox.ymax AS fp_ymax")
+    else:
+        sel = "SELECT *"
+    sql = (f"INSTALL spatial;LOAD spatial;INSTALL httpfs;LOAD httpfs;"
+           f"COPY ({sel} FROM read_parquet('{src_url}')) TO '{out}' (FORMAT parquet);")
+    subprocess.run([DUCKDB, "-c", sql], check=True, capture_output=True)
+    t = pq.read_table(out)
+    if "OGC_FID" in t.column_names:
+        t = t.drop(["OGC_FID"])
+    cast = {f.name: pc.cast(t[f.name], pa.string()) for f in t.schema if pa.types.is_temporal(f.type)}
+    for n, col in cast.items():
+        t = t.set_column(t.schema.get_field_index(n), pa.field(n, pa.string()), col)
+    return t
+
+def _semprops(info):
+    return {"theme": info["theme"], "title": info["title"], "semantics": json.dumps(info["semantics"])}
+
+def build_geo_generic(name, src_url, info, docs):
+    """Build BOTH v2 (WKB + flat bbox) and v3 (native geoarrow geom) Iceberg tables from a
+    source GeoParquet, preserving every attribute column. Returns (v2_meta, v3_meta)."""
+    t = _normalize(name, src_url, geom=True)
+    attr = [c for c in t.column_names if c not in ("geom_wkb", "fp_xmin", "fp_ymin", "fp_xmax", "fp_ymax")]
+    # ---- v2: attributes + geom_wkb + fp_* (column order = attrs, geom_wkb, fp_*) ----
+    v2_cols = attr + ["geom_wkb", "fp_xmin", "fp_ymin", "fp_xmax", "fp_ymax"]
+    v2t = t.select(v2_cols)
+    ice, fields, namemap = [], [], []
+    for i, n in enumerate(v2_cols, 1):
+        f = v2t.schema.field(n)
+        nf, jf = _ice_field(f, i)
+        ice.append(nf); fields.append(jf); namemap.append({"field-id": i, "names": [n]})
+    fid = {n: i for i, n in enumerate(v2_cols, 1)}
+    root = STAGING / "data" / "v2" / name; (root / "data").mkdir(parents=True, exist_ok=True)
+    pqpath = root / "data" / f"{name}.parquet"
+    # re-id the arrow schema field metadata so PARQUET:field_id matches the Iceberg ids
+    v2t = v2t.replace_schema_metadata(None).cast(pa.schema(
+        [pa.field(n, v2t.schema.field(n).type, metadata=_fmeta(fid[n])) for n in v2_cols]))
+    pq.write_table(v2t, pqpath, compression="zstd")
+    geo = {"version": "1.0", "primary_column": "geom_wkb", "columns": {"geom_wkb": {
+        "encoding": "WKB", "crs": "OGC:CRS84", "edges": "planar",
+        "bbox_columns": ["fp_xmin", "fp_ymin", "fp_xmax", "fp_ymax"]}}}
+    lo = {fid[c]: dle(pc.min(t[c]).as_py()) for c in ("fp_xmin", "fp_ymin", "fp_xmax", "fp_ymax")}
+    up = {fid[c]: dle(pc.max(t[c]).as_py()) for c in ("fp_xmin", "fp_ymin", "fp_xmax", "fp_ymax")}
+    df = [{"path": f"data/{name}.parquet", "size": pqpath.stat().st_size, "rows": t.num_rows, "lower": lo, "upper": up}]
+    v2mp = write_static_catalog(table_root=root, iceberg_schema=Schema(*ice), schema_json_fields=fields,
+                                name_mapping=namemap, data_files=df, format_version_in_metadata=2,
+                                location_uri=f"{BASE_URI}/data/v2/{name}",
+                                extra_properties={"geo": json.dumps(geo), **_semprops(info)})
+    v2_meta = _finalize(v2mp, docs)
+    # ---- v3: attributes + native geom (geoarrow WKB extension type) ----
+    v3_cols = attr + ["geom"]
+    arrays = {c: t[c] for c in attr}
+    arrays["geom"] = GEOM_EXT.wrap_array(t["geom_wkb"].combine_chunks())
+    ice, fields, namemap = [], [], []
+    for i, n in enumerate(v3_cols, 1):
+        if n == "geom":
+            ice.append(NestedField(i, "geom", BinaryType(), required=False))
+            fields.append({"id": i, "name": "geom", "required": False, "type": "geometry"})
+        else:
+            nf, jf = _ice_field(v2t.schema.field(n), i); ice.append(nf); fields.append(jf)
+        namemap.append({"field-id": i, "names": [n]})
+    fid3 = {n: i for i, n in enumerate(v3_cols, 1)}
+    v3schema = pa.schema([pa.field(n, (GEOM_EXT if n == "geom" else t.schema.field(n).type),
+                                    metadata=_fmeta(fid3[n])) for n in v3_cols])
+    v3t = pa.table({n: arrays[n] for n in v3_cols}, schema=v3schema)
+    root3 = STAGING / "data" / "v3" / name; (root3 / "data").mkdir(parents=True, exist_ok=True)
+    pq3 = root3 / "data" / f"{name}.parquet"
+    pq.write_table(v3t, pq3, compression="zstd", store_schema=True, write_statistics=True)
+    x0, y0 = pc.min(t["fp_xmin"]).as_py(), pc.min(t["fp_ymin"]).as_py()
+    x1, y1 = pc.max(t["fp_xmax"]).as_py(), pc.max(t["fp_ymax"]).as_py()
+    g = fid3["geom"]
+    df3 = [{"path": f"data/{name}.parquet", "size": pq3.stat().st_size, "rows": t.num_rows,
+            "lower": {g: xy(x0, y0)}, "upper": {g: xy(x1, y1)},
+            "value_counts": {g: t.num_rows}, "null_value_counts": {g: 0}}]
+    v3mp = write_static_catalog(table_root=root3, iceberg_schema=Schema(*ice), schema_json_fields=fields,
+                                name_mapping=namemap, data_files=df3, format_version_in_metadata=3,
+                                location_uri=f"{BASE_URI}/data/v3/{name}", extra_properties=_semprops(info))
+    return v2_meta, _finalize(v3mp, docs)
+
+def build_tab_generic(name, src_url, info, docs):
+    """Build a NON-spatial Iceberg table (no geometry) from a source parquet → `tab` namespace."""
+    t = _normalize(name, src_url, geom=False)
+    cols = t.column_names
+    ice, fields, namemap = [], [], []
+    for i, n in enumerate(cols, 1):
+        nf, jf = _ice_field(t.schema.field(n), i); ice.append(nf); fields.append(jf)
+        namemap.append({"field-id": i, "names": [n]})
+    fid = {n: i for i, n in enumerate(cols, 1)}
+    t = t.cast(pa.schema([pa.field(n, t.schema.field(n).type, metadata=_fmeta(fid[n])) for n in cols]))
+    root = STAGING / "data" / "tab" / name; (root / "data").mkdir(parents=True, exist_ok=True)
+    pqpath = root / "data" / f"{name}.parquet"
+    pq.write_table(t, pqpath, compression="zstd")
+    df = [{"path": f"data/{name}.parquet", "size": pqpath.stat().st_size, "rows": t.num_rows, "lower": {}, "upper": {}}]
+    mp = write_static_catalog(table_root=root, iceberg_schema=Schema(*ice), schema_json_fields=fields,
+                              name_mapping=namemap, data_files=df, format_version_in_metadata=2,
+                              location_uri=f"{BASE_URI}/data/tab/{name}", extra_properties=_semprops(info))
+    return _finalize(mp, docs)
+
+
 # --- catalog.datasets : stac-geoparquet (STAC Items in Iceberg) -------------
 # Federation by real PUBLISHER. Each publisher converts ITS OWN data, so each gets its
 # OWN filtered STAC index. Materialized vector data is a base table name (power_lines/
@@ -214,11 +341,65 @@ MATERIALIZED = {  # NLS id -> (v2 table base, format, recipe, keywords)
 RELEVANT = {"tieviiva": "roads; access",
             "muuntaja": "transformer/substation; grid", "korkeuskayra": "contours; terrain"}
 
-# NLS datasets materialized as cloud-native GeoParquet FILES (not Iceberg tables): id -> (url, recipe, keywords)
-FILE_MATERIALIZED = {
-    "rakennus": (f"{EXTRA}/buildings.parquet",
-                 "nearest building distance (m): ST_Distance over geom in EPSG:3067",
-                 "buildings; building footprints; built environment"),
+# Sources WE transform → full Iceberg tables (we go all the way; never half-way GeoParquet
+# files). id -> (table name, source (Geo)Parquet url, geom?). Geo → v2+v3; non-geo → `tab`.
+CONVERT = {
+    "rakennus":               ("buildings",          f"{EXTRA}/buildings.parquet",          True),
+    "tulvavaarakartta":       ("flood_hazard",       f"{EXTRA}/flood_hazard.parquet",       True),
+    "natura2000":             ("natura2000",         f"{EXTRA}/natura2000.parquet",         True),
+    "pohjavesialue":          ("groundwater",        f"{EXTRA}/groundwater.parquet",        True),
+    "urbanatlas":             ("urbanatlas",         f"{EXTRA}/urbanatlas.parquet",         True),
+    "seuturamava_kortteli":   ("hsy_zoning",         f"{EXTRA}/hsy_zoning.parquet",         True),
+    "paavo_vaesto":           ("statfi_paavo",       f"{EXTRA}/statfi_paavo.parquet",       True),
+    "vaestoruutu_1km":        ("statfi_popgrid",     f"{EXTRA}/statfi_popgrid.parquet",     True),
+    "ykr_urban_structure":    ("lf_ykr",             f"{EXTRA}/lf_ykr.parquet",             True),
+    "electricity_consumption":("fingrid_consumption",f"{EXTRA}/fingrid_consumption.parquet",False),
+    "electricity_prices":     ("eurostat_elec",      f"{EXTRA}/eurostat_elec.parquet",      False),
+}
+def tbl_mat(stac_id):
+    """mat tuple for a dataset we converted to an Iceberg table."""
+    name, _src, geom = CONVERT[stac_id]
+    return ("table", name, "geoparquet" if geom else "parquet")
+
+# Overture is already cloud-native GeoParquet at planet scale → left as a REMOTE GeoParquet
+# on Overture's public bucket (queried in place; the S3/secret/hive/bbox access is the one
+# tricky bit we ship a query_hint for).
+OVERTURE_HREF = "s3://overturemaps-us-west-2/release/2026-05-20.0/theme=places/type=place/*"
+
+# Per-column docs for the converted tables (Iceberg field `doc`). Shared geo/key columns
+# below; the rest carry their source field name (already descriptive) with no extra doc.
+SHARED_DOC = {
+    "id": "Source feature identifier.",
+    "geom_wkb": "Geometry — WKB encoding, CRS OGC:CRS84 (EPSG:4326).",
+    "geom": "Geometry — native geoarrow encoding, CRS OGC:CRS84 (EPSG:4326).",
+    "fp_xmin": "Feature bounding-box minimum longitude, WGS84 (spatial pruning).",
+    "fp_ymin": "Feature bounding-box minimum latitude, WGS84 (spatial pruning).",
+    "fp_xmax": "Feature bounding-box maximum longitude, WGS84 (spatial pruning).",
+    "fp_ymax": "Feature bounding-box maximum latitude, WGS84 (spatial pruning).",
+}
+TBL_DOC = {
+    "buildings": {"mtk_id": "NLS building identifier.", "kohdeluokka": "NLS feature-class code.",
+                  "kerrosluku": "Number of storeys.", "kayttotarkoitus": "Building use code.",
+                  "alkupvm": "Record start date."},
+    "flood_hazard": {"tulvasuojtoistuvuus": "Flood return period (years).", "area_m2": "Zone area (m²).",
+                     "perimeter_m": "Zone perimeter (m)."},
+    "natura2000": {"naturaTunnus": "Natura 2000 site code.", "nimiSuomi": "Site name (Finnish).",
+                   "alueTyyppi": "Site type (SAC habitats / SPA birds).", "paatosPAla_ha": "Designated area (ha)."},
+    "groundwater": {"pvaluenimi": "Groundwater area name.", "pvalueluokka": "Classification class.",
+                    "kunta": "Municipality.", "tilamaara": "Quantitative status.", "area_m2": "Area (m²)."},
+    "urbanatlas": {"class_2018": "Urban Atlas 2018 land-use class.", "code_2018": "Urban Atlas 2018 class code."},
+    "hsy_zoning": {"kunta": "Municipality.", "korttunnus": "Plan-block identifier.",
+                   "rakerayht": "Built floor area, total (m²).", "laskvar_yh": "Unused building-rights reserve, total (m²).",
+                   "laskvar_t": "Reserve, industrial use T (m²).", "laskvar_ak": "Reserve, blocks-of-flats AK (m²).",
+                   "laskvar_ap": "Reserve, low-rise residential AP (m²)."},
+    "statfi_paavo": {"nimi": "Postal area name.", "postinumeroalue": "Postal code.", "he_vakiy": "Resident population.",
+                     "hr_mtu": "Median income (EUR).", "tp_tyopy": "Jobs (workplaces).", "pt_tyott": "Unemployed persons."},
+    "statfi_popgrid": {"vaesto": "Inhabitants in the 1 km cell.", "ika_0_14": "Age 0–14.",
+                       "ika_15_64": "Age 15–64.", "ika_65_": "Age 65+.", "kunta": "Municipality."},
+    "lf_ykr": {"Luokka": "YKR urban-structure zone class (1 = inner urban → higher = more peripheral)."},
+    "fingrid_consumption": {"start_time": "Interval start (UTC).", "consumption_mw": "National electricity load (MW)."},
+    "eurostat_elec": {"geo": "Country code.", "country": "Country name.", "period": "Reporting period.",
+                      "price_eur_per_kwh": "Industrial electricity price incl. taxes (EUR/kWh)."},
 }
 
 # collection prefix -> publisher sub-catalog (who converted it)
@@ -273,60 +454,32 @@ _GRID = ("WITH grid AS (SELECT :lon+(i-3)*0.0009 lon, :lat+(j-3)*0.00045 lat "
          "FROM range(0,7) a(i), range(0,7) b(j)) ")
 def _example_query(mat):
     # Hints are ONLY for tricky cloud-native access patterns the agent wouldn't reasonably
-    # guess — i.e. raquet rasters (block/quadbin sampling). For everything else the agent
-    # composes its own query from the schema + GeoParquet geo-metadata + OSI semantics.
-    if not mat or mat[2] != "raquet":
+    # guess: raquet rasters (block/quadbin sampling) and the remote Overture GeoParquet
+    # (S3 secret + hive partitioning + bbox prune). Iceberg vector/non-spatial tables ship
+    # NO query — the agent composes its own SQL from the schema + geo-metadata + OSI semantics.
+    if not mat:
         return None
-    kind, val, _fmt = mat
-    if kind == "table":  # Iceberg vector table (GeoParquet, WKB) — nearest distance in metric CRS
-        return ("SELECT round(min(ST_Distance("
-                "ST_Transform(ST_GeomFromWKB(geom_wkb),'EPSG:4326','EPSG:3067'),"
-                "ST_Transform(ST_Point(:lon,:lat),'EPSG:4326','EPSG:3067')))) AS metres "
-                f"FROM <catalog>.v2.{val};")
-    if kind == "file":  # cloud-native GeoParquet file (native geom column) — read in place
-        return ("SELECT round(min(ST_Distance("
-                "ST_Transform(geom,'EPSG:4326','EPSG:3067'),"
-                "ST_Transform(ST_Point(:lon,:lat),'EPSG:4326','EPSG:3067')))) AS metres "
-                f"FROM read_parquet('{val}');")
-    if kind == "class":  # land-use classification: which polygon covers the site (point-in-polygon)
-        return (f"SELECT class_2018 AS land_use FROM read_parquet('{val}') "
-                "WHERE ST_Contains(geom, ST_Point(:lon,:lat)) LIMIT 1;")
-    if kind == "zoning":  # plan block at the site: built vs unused building rights by use category
-        return ("SELECT kunta, round(rakerayht) AS built_floor_m2, round(laskvar_yh) AS reserve_floor_m2, "
-                f"round(laskvar_t) AS reserve_industrial_m2 FROM read_parquet('{val}') "
-                "WHERE ST_Contains(geom, ST_Point(:lon,:lat)) LIMIT 1;")
-    if kind == "tabular":  # NON-spatial dataset (e.g. grid time-series): aggregate, no geometry
-        return ("SELECT round(avg(consumption_mw)) AS avg_load_mw, round(max(consumption_mw)) AS peak_load_mw, "
-                f"round(min(consumption_mw)) AS min_load_mw FROM read_parquet('{val}');")
-    if kind == "demographics":  # postal-area statistics at the site (point-in-polygon)
-        return ("SELECT nimi AS postal_area, he_vakiy AS population, hr_mtu AS median_income_eur, "
-                f"tp_tyopy AS jobs, pt_tyott AS unemployed FROM read_parquet('{val}') "
-                "WHERE ST_Contains(geom, ST_Point(:lon,:lat)) LIMIT 1;")
-    if kind == "popgrid":  # 1 km population-grid cell at the site
-        return ("SELECT vaesto AS population_1km_cell, ika_0_14, ika_15_64, ika_65_ "
-                f"FROM read_parquet('{val}') WHERE ST_Contains(geom, ST_Point(:lon,:lat)) LIMIT 1;")
-    if kind == "ykr":  # YKR urban-structure zone class at the site (1 = most urban → higher = more peripheral)
-        return ("SELECT Luokka AS urban_structure_class FROM read_parquet('"
-                f"{val}') WHERE ST_Contains(geom, ST_Point(:lon,:lat)) LIMIT 1;")
+    kind, val, fmt = mat
+    if kind == "overture":  # remote GeoParquet on Overture's public S3 — read in place
+        return ("CREATE SECRET (TYPE s3, PROVIDER config, REGION 'us-west-2'); "
+                f"SELECT count(*) AS places_within_1km FROM read_parquet('{val}', hive_partitioning=1) "
+                "WHERE bbox.xmin BETWEEN :lon-0.03 AND :lon+0.03 AND bbox.ymin BETWEEN :lat-0.03 AND :lat+0.03 "
+                "AND ST_DWithin(ST_Transform(geometry,'EPSG:4326','EPSG:3067'),"
+                "ST_Transform(ST_Point(:lon,:lat),'EPSG:4326','EPSG:3067'), 1000);")
+    if fmt != "raquet":
+        return None
     if kind == "climate":  # raster (raquet) point-sample of a climate variable, averaged over a small grid
         return (_GRID + "SELECT round(avg(t),1) AS mean_annual_temp_c FROM ("
                 "SELECT ST_RasterValue(r.block,r.band_1,ST_Point(g.lon,g.lat),r.metadata) t "
                 f"FROM grid g, read_raquet('{val}') r "
                 "WHERE ST_Contains(ST_GeomFromQuadbin(r.block),ST_Point(g.lon,g.lat))) WHERE t > -9999;")
-    if kind == "poicount":  # global POI density near the site (count within 1 km)
-        return ("SELECT count(*) AS places_within_1km FROM read_parquet('"
-                f"{val}') WHERE ST_DWithin(ST_Transform(geom,'EPSG:4326','EPSG:3067'),"
-                "ST_Transform(ST_Point(:lon,:lat),'EPSG:4326','EPSG:3067'), 1000);")
-    if kind == "prices":  # NON-spatial: country price comparison
-        return ("SELECT country, price_eur_per_kwh, period FROM read_parquet('"
-                f"{val}') ORDER BY price_eur_per_kwh;")
     if "ndvi" in val:  # raster (raquet) — NDVI = (NIR-Red)/(NIR+Red)
         return _GRID + ("SELECT avg((b2-b1)/(b2+b1)) AS ndvi FROM ("
                         "SELECT ST_RasterValue(r.block,r.band_2,ST_Point(g.lon,g.lat),r.metadata) b2,"
                         "ST_RasterValue(r.block,r.band_1,ST_Point(g.lon,g.lat),r.metadata) b1 "
                         f"FROM grid g, read_raquet('{val}') r "
                         "WHERE ST_Contains(ST_GeomFromQuadbin(r.block),ST_Point(g.lon,g.lat)) AND r.band_1 IS NOT NULL);")
-    return _GRID + ("SELECT min(elev) AS min_m, stddev(elev) AS slope_sigma FROM ("
+    return _GRID + ("SELECT min(elev) AS min_m, stddev(elev) AS slope_sigma FROM ("  # DEM (2 m laser)
                     "SELECT ST_RasterValue(r.block,r.band_1,ST_Point(g.lon,g.lat),r.metadata) elev "
                     f"FROM grid g, read_raquet('{val}') r "
                     "WHERE ST_Contains(ST_GeomFromQuadbin(r.block),ST_Point(g.lon,g.lat)));")
@@ -350,6 +503,7 @@ SEM = {
  "paavo_vaesto":("Postal-area demographics","Statistics Finland Paavo: population, income, employment, age.","population, income & employment by postal area","persons / EUR"),
  "vaestoruutu_1km":("Population grid · 1 km","Statistics Finland inhabitants per 1 km cell.","population per 1 km cell","persons"),
  "ykr_urban_structure":("Urban-structure zones (YKR)","Location Finland settlement-structure classification.","settlement-structure classification","class"),
+ "electricity_consumption":("Electricity consumption (national grid load)","Fingrid national electricity load, 15-min values in MW.","national electricity demand / load","MW"),
  "electricity_prices":("Industrial electricity price","Eurostat industrial electricity price by country (incl. taxes).","energy cost","EUR / kWh"),
  "places":("Points of interest","Overture global places (cloud-native, planet scale).","amenities & activity","count"),
 }
@@ -363,14 +517,18 @@ def collect_rows():
                          "datetime", "properties", "assets_recipe", "stac_version", "type",
                          "publisher", "mat")}
     def add(cid, coll, title, desc, item_type, bbox, crs, mat, recipe, kw):
-        # mat: ('table','power_lines','geoparquet') | ('url',<href>,'raquet') | None
+        # mat: ('table','power_lines','geoparquet') | ('url',<href>,'raquet')
+        # We only catalog what is actually accessible: a dataset with no cloud-native
+        # data published (mat is None) is not listed at all.
+        if mat is None:
+            return
         x0, y0, x1, y1 = (list(bbox) + [None] * 4)[:4] if bbox else (None, None, None, None)
         R["id"].append(cid); R["collection"].append(coll)
         R["geometry"].append(_wkb_box(x0, y0, x1, y1))
         R["xmin"].append(x0); R["ymin"].append(y0); R["xmax"].append(x1); R["ymax"].append(y1)
         R["datetime"].append(None)
         sem = SEM.get(cid)
-        is_raster = bool(mat) and mat[2] == "raquet"
+        tricky = bool(mat) and (mat[2] == "raquet" or mat[0] == "overture")  # access patterns we hint
         props = {
             "title": (sem[0] if sem else title), "description": ((sem[1] if sem else desc) or "")[:400],
             "keywords": kw.split("; ") if kw else [], "item_type": item_type, "crs": crs,
@@ -380,23 +538,22 @@ def collect_rows():
         if sem:  # Open Semantic Interchange (OSI) block — what it means / answers / unit
             props["semantics"] = {"spec": "Open Semantic Interchange", "label": sem[0],
                                   "describes": sem[1], "answers": sem[2], "unit": sem[3]}
-        if mat is None:
-            props["availability"] = "catalogued · convert-on-demand"
-        if is_raster:  # tricky cloud-native raster (raquet) — ship a hint the agent wouldn't guess
-            props["access_recipe"] = recipe
+        if tricky:  # raquet raster or remote Overture — ship a hint the agent wouldn't guess
+            if recipe:
+                props["access_recipe"] = recipe
             props["query_hint"] = _example_query(mat)
-        # materialized vectors/tables carry NO query: the agent composes it from schema + geo + semantics
+        # Iceberg tables carry NO query: the agent composes it from schema + geo + semantics
         R["properties"].append(json.dumps(props))
         R["stac_version"].append("1.1.0"); R["type"].append("Feature")
         R["publisher"].append(publisher_of(coll)); R["mat"].append(mat)
     for c in cols:
         sp = (((c.get("extent") or {}).get("spatial") or {}).get("bbox") or [None])
         bbox = sp[0] if (sp and isinstance(sp[0], list)) else None
-        m = MATERIALIZED.get(c["id"]); fm = FILE_MATERIALIZED.get(c["id"])
+        m = MATERIALIZED.get(c["id"])
         if m:
             mat, recipe, kw = ("table", m[0], m[1]), m[2], m[3]
-        elif fm:
-            mat, recipe, kw = ("file", fm[0], "geoparquet"), fm[1], fm[2]
+        elif c["id"] in CONVERT:
+            mat, recipe, kw = tbl_mat(c["id"]), None, "buildings; building footprints; built environment"
         else:
             mat, recipe, kw = None, None, RELEVANT.get(c["id"], "")
         add(c["id"], "nls-topographic", c.get("title"), c.get("description"), c.get("itemType"),
@@ -415,26 +572,22 @@ def collect_rows():
         "vegetation; NDVI; land cover; remote sensing")
     add("urbanatlas", "copernicus-urbanatlas", "Urban Atlas 2018 land use (Helsinki FUA)",
         "Copernicus Urban Atlas 2018 land-use polygons for the Helsinki Functional Urban Area — the authoritative land-use class per parcel (e.g. Forests, Discontinuous urban fabric, Industrial).",
-        "feature", [24.15, 60.08, 24.80, 60.40], "OGC:CRS84", ("class", f"{EXTRA}/urbanatlas.parquet", "geoparquet"),
-        "land-use class at the site (point-in-polygon): SELECT class_2018 WHERE ST_Contains(geom, site)",
+        "feature", [24.15, 60.08, 24.80, 60.40], "OGC:CRS84", tbl_mat("urbanatlas"), None,
         "land use; land cover; urban atlas; copernicus")
     # SYKE — Finnish Environment Institute. Flood + Natura + groundwater MATERIALIZED
-    # (clipped to the Helsinki-region AOI from SYKE's OGC API Features); CORINE still convert-on-demand.
+    # (clipped to the Helsinki-region AOI from SYKE's OGC API Features). CORINE is not materialized, so not listed.
     AOI = [24.15, 60.08, 24.80, 60.40]
     add("tulvavaarakartta", "syke", "Flood hazard zones (basic scenarios)",
         "SYKE flood-hazard inundation zones by return period (tulvavaaravyöhykkeet, perusskenaariot), clipped to the Helsinki-region AOI.",
-        "feature", AOI, "OGC:CRS84", ("file", f"{EXTRA}/flood_hazard.parquet", "geoparquet"),
-        "nearest flood-hazard zone (m): ST_Distance over geom in EPSG:3067 (attribute tulvasuojtoistuvuus = return period, yr)",
+        "feature", AOI, "OGC:CRS84", tbl_mat("tulvavaarakartta"), None,
         "flood risk; flood hazard")
     add("natura2000", "syke", "Natura 2000 protected areas (SAC + SPA)",
         "EU Natura 2000 network — habitats (SAC) + birds (SPA) directive sites in the AOI, published by SYKE.",
-        "feature", AOI, "OGC:CRS84", ("file", f"{EXTRA}/natura2000.parquet", "geoparquet"),
-        "nearest Natura 2000 site (m): ST_Distance over geom in EPSG:3067",
+        "feature", AOI, "OGC:CRS84", tbl_mat("natura2000"), None,
         "environmental constraint; protected; natura")
     add("pohjavesialue", "syke", "Groundwater areas (classified, VHS2022)",
         "SYKE classified groundwater areas (pohjavesialueet, VHS2022), delineated for water-supply protection.",
-        "feature", AOI, "OGC:CRS84", ("file", f"{EXTRA}/groundwater.parquet", "geoparquet"),
-        "distance to / inside a classified groundwater area (m): ST_Distance over geom in EPSG:3067",
+        "feature", AOI, "OGC:CRS84", tbl_mat("pohjavesialue"), None,
         "groundwater; aquifer; water supply; environment")
     add("corine-land-cover", "syke", "CORINE Land Cover 2018",
         "Pan-European CORINE land cover for Finland, published by SYKE.", "coverage", AOI, "OGC:CRS84", None, None,
@@ -443,31 +596,26 @@ def collect_rows():
     # detailed-plan-block land-use category + built vs unused building-rights reserve.
     add("seuturamava_kortteli", "hsy-maankaytto", "Zoning / building-rights reserve by plan block (SeutuRAMAVA)",
         "HSY regional building-land reserve aggregated from municipal detailed plans, per plan block: land-use category, built floor area, and unused building-rights reserve (AK/AP/K/T/Y). Covers Espoo/Vantaa/Kauniainen.",
-        "feature", AOI, "OGC:CRS84", ("zoning", f"{EXTRA}/hsy_zoning.parquet", "geoparquet"),
-        "plan block at the site: built vs reserve floor area by use category (T = industrial)",
+        "feature", AOI, "OGC:CRS84", tbl_mat("seuturamava_kortteli"), None,
         "zoning; land-use plan; building rights; spatial planning")
     # Fingrid — NON-spatial: national electricity grid load (time-series). Shows the SDI is not geo-only.
     add("electricity_consumption", "fingrid-grid", "Finland electricity consumption (national grid load)",
         "Fingrid national electricity consumption, 15-min values in MW (30-day snapshot). Non-spatial time-series of national electricity demand.",
-        "timeseries", None, None, ("tabular", f"{EXTRA}/fingrid_consumption.parquet", "parquet"),
-        "recent national electricity load: avg / peak / min MW",
+        "timeseries", None, None, tbl_mat("electricity_consumption"), None,
         "electricity; grid; capacity; power; non-spatial")
     # Statistics Finland — official statistics (Paavo postal-area demographics + 1 km population grid)
     add("paavo_vaesto", "statfi-paavo", "Postal-area demographics (Paavo 2025)",
         "Statistics Finland Paavo open data: population, income, employment and age structure per postal-code area — statistics joined to postal-area geometry.",
-        "feature", AOI, "OGC:CRS84", ("demographics", f"{EXTRA}/statfi_paavo.parquet", "geoparquet"),
-        "demographics of the postal area at the site: population, median income (EUR), jobs, unemployed",
+        "feature", AOI, "OGC:CRS84", tbl_mat("paavo_vaesto"), None,
         "demographics; population; income; employment; statistics")
     add("vaestoruutu_1km", "statfi-vaesto", "Population grid 1 km (2025)",
         "Statistics Finland 1 km population grid: inhabitants and age groups per cell.",
-        "feature", AOI, "OGC:CRS84", ("popgrid", f"{EXTRA}/statfi_popgrid.parquet", "geoparquet"),
-        "population in the 1 km cell at the site (with age groups)",
+        "feature", AOI, "OGC:CRS84", tbl_mat("vaestoruutu_1km"), None,
         "population; population density; demographics; statistics")
     # Location Finland (national Location Innovation Hub platform, API-key gateway) — urban structure
     add("ykr_urban_structure", "lf-ykr", "Urban structure zones (YKR)",
         "Location Finland (national geospatial platform): YKR settlement/urban-structure zone classification — places the site on the urban→peripheral gradient (1 = inner urban; higher = more peripheral / rural).",
-        "feature", AOI, "OGC:CRS84", ("ykr", f"{EXTRA}/lf_ykr.parquet", "geoparquet"),
-        "YKR urban-structure zone class at the site (point-in-polygon)",
+        "feature", AOI, "OGC:CRS84", tbl_mat("ykr_urban_structure"), None,
         "urban structure; settlement; land use")
     add("temperature", "lf-climate", "Mean annual air temperature (climate grid)",
         "Location Finland climate coverage: mean annual air temperature (°C). Materialized from the OGC API coverage (GeoTIFF) to cloud-native raquet via the DuckDB raquet extension.",
@@ -476,25 +624,30 @@ def collect_rows():
         "climate; air temperature; meteorology")
     # Overture Maps (GLOBAL) — the same DuckDB-over-GeoParquet pattern, at planet scale.
     add("places", "overture-places", "Points of interest (Overture Maps, global)",
-        "Overture Maps global places — a slice of the planet-scale, cloud-native GeoParquet catalog (released on object storage, queried with DuckDB exactly like everything else here). POI density / activity around the site.",
-        "feature", [24.15, 60.08, 24.80, 60.40], "OGC:CRS84", ("poicount", f"{EXTRA}/overture_places.parquet", "geoparquet"),
-        "number of Overture places within 1 km of the site (filter `category` for supermarkets, schools, etc.)",
+        "Overture Maps global places — the planet-scale, cloud-native GeoParquet catalog on Overture's public object storage, queried in place with DuckDB exactly like everything else here. POI density / activity around the site.",
+        "feature", [24.15, 60.08, 24.80, 60.40], "OGC:CRS84", ("overture", OVERTURE_HREF, "geoparquet"),
+        "remote GeoParquet on Overture's public S3 — read in place (S3 secret + hive partitioning + bbox prune)",
         "points of interest; supermarkets; grocery; amenities; services; activity; global")
     # Eurostat (EUROPEAN) — NON-spatial: EU-wide industrial electricity prices.
     add("electricity_prices", "eurostat-energy", "Electricity prices, industrial (Eurostat)",
         "Eurostat electricity prices for industrial consumers (band 2000–20000 MWh/yr, incl. taxes, €/kWh): Finland vs the EU-27 average, by country. Non-spatial.",
-        "table", None, None, ("prices", f"{EXTRA}/eurostat_elec.parquet", "parquet"),
-        "Finland vs EU-27 industrial electricity price (EUR/kWh)",
+        "table", None, None, tbl_mat("electricity_prices"), None,
         "electricity price; energy cost; non-spatial; european")
     return R
 
 
 def _render_assets(mat, scope):
-    """scope: 'combined' -> sdi.v2.<t> ; 'publisher' -> v2.<t> (relative to alias)."""
+    """scope: 'combined' -> sdi.<ns>.<t> ; 'publisher' -> <ns>.<t> (relative to alias).
+    Iceberg tables resolve to a table ref (ns = v2 for geometry, tab for non-spatial);
+    everything else (raquet rasters, remote Overture GeoParquet) is a direct href."""
     if mat is None:
         return json.dumps({})
     kind, val, fmt = mat
-    href = (f"sdi.v2.{val}" if scope == "combined" else f"v2.{val}") if kind == "table" else val
+    if kind == "table":
+        ns = "v2" if fmt == "geoparquet" else "tab"
+        href = f"sdi.{ns}.{val}" if scope == "combined" else f"{ns}.{val}"
+    else:
+        href = val
     return json.dumps({"data": {"href": href, "type": fmt, "roles": ["data"]}})
 
 
@@ -568,7 +721,7 @@ def write_index(R, idxs, storage_key, scope, title):
     pq.write_table(tbl, pqpath, compression="zstd")
     qcat = "sdi" if scope == "combined" else "<this catalog>"
     props = {"geo": json.dumps(_IDX_GEO), "theme": "catalog-index", "format": "stac-geoparquet", "title": title,
-             "semantics": json.dumps({"describes": "STAC Items for this catalog's datasets (stac-geoparquet). properties.materialized=true means cloud-native data is published (assets.data.href); others catalogued & convertible on demand.",
+             "semantics": json.dumps({"describes": "STAC Items for this catalog's datasets (stac-geoparquet). Every dataset listed is accessible: cloud-native data is published at assets.data.href (properties.materialized=true).",
                                       "answers": ["dataset discovery", "what data exists", "is X available"],
                                       "query_recipe": f"SELECT id, collection, assets FROM {qcat}.catalog.datasets WHERE properties ILIKE '%elevation%'"})}
     mp = write_static_catalog(table_root=root, iceberg_schema=_IDX_ICE, schema_json_fields=_IDX_FIELDS,
@@ -624,34 +777,58 @@ def publish(catalogs):
     print(f"published combined + {len(catalogs)-1} publisher catalogs (anonymous-read) → {BASE_URI}/<catalog>")
 
 
+def _tbl_info(stac_id, publisher):
+    """Table-level GeoIceberg properties (theme/title/semantics) from the dataset's OSI entry."""
+    s = SEM.get(stac_id)
+    if s:
+        return dict(title=s[0], theme=publisher,
+                    semantics=dict(describes=s[1], answers=[s[2]], unit=s[3]))
+    return dict(title=stac_id, theme=publisher, semantics=dict(describes=stac_id))
+
+
 def main():
     if STAGING.exists(): shutil.rmtree(STAGING)
-    # 1) NLS vector data tables (v2 = WKB/DuckDB, v3 = native geom)
-    data_meta = {}
+    data_meta, owner = {}, {}  # storage_key -> (metadata, owning publisher)
+    # 1a) NLS original vector tables (v2 = WKB/DuckDB, v3 = native geom)
     for name, info in DATASETS.items():
         data_meta[f"v2/{name}"] = build_v2(name, info)
         data_meta[f"v3/{name}"] = build_v3(name, info)
+        owner[f"v2/{name}"] = owner[f"v3/{name}"] = "national-land-survey"
         print(f"built v2+v3: {name}")
 
-    # 2) STAC indexes — one combined (for the `sdi` catalog / web-app) + one per publisher
+    # 1b) everything WE transform → full Iceberg tables too (per CONVERT). Geo → v2+v3; non-geo → tab.
     R = collect_rows()
+    pub_of_id = {R["id"][i]: R["publisher"][i] for i in range(len(R["id"]))}
+    for stac_id, (name, src, geom) in CONVERT.items():
+        pub = pub_of_id[stac_id]
+        info, docs = _tbl_info(stac_id, pub), {**SHARED_DOC, **TBL_DOC.get(name, {})}
+        if geom:
+            v2m, v3m = build_geo_generic(name, src, info, docs)
+            data_meta[f"v2/{name}"], data_meta[f"v3/{name}"] = v2m, v3m
+            owner[f"v2/{name}"] = owner[f"v3/{name}"] = pub
+            print(f"built v2+v3: {name} ({pub})")
+        else:
+            data_meta[f"tab/{name}"] = build_tab_generic(name, src, info, docs)
+            owner[f"tab/{name}"] = pub
+            print(f"built tab:   {name} ({pub})")
+
+    # 2) STAC indexes — one combined (for the `sdi` catalog / web-app) + one per publisher
     all_idx = list(range(len(R["id"])))
     combined_meta, n_all = write_index(R, all_idx, "catalog/datasets", "combined",
                                        "STAC catalog index — all publishers (stac-geoparquet)")
-    vtables = [(k.split("/")[0], k.split("/")[1], m, k) for k, m in data_meta.items()]  # v2/v3 tables
+    vtables = [(k.split("/")[0], k.split("/")[1], m, k) for k, m in data_meta.items()]  # all data tables
     catalogs = {"": make_surface(vtables + [("catalog", "datasets", combined_meta, "catalog/datasets")])}
 
-    # 3) one publisher sub-catalog per distinct publisher present in the rows
+    # 3) one publisher sub-catalog per distinct publisher — each carries ITS OWN tables
     summary = [f"combined {n_all}"]
     for pub in sorted(set(R["publisher"])):
         endpoint, slug = PUBLISHERS[pub]
         idxs = [i for i in all_idx if R["publisher"][i] == pub]
         meta, n = write_index(R, idxs, f"idx/{slug}", "publisher", f"{pub} — STAC index")
-        tabs = (vtables if pub == "national-land-survey" else []) + \
-               [("catalog", "datasets", meta, f"idx/{slug}")]
-        catalogs[endpoint] = make_surface(tabs)
-        summary.append(f"{endpoint} {n}")
-    print("indexes: " + " · ".join(summary))
+        owned = [(k.split("/")[0], k.split("/")[1], data_meta[k], k) for k in data_meta if owner[k] == pub]
+        catalogs[endpoint] = make_surface(owned + [("catalog", "datasets", meta, f"idx/{slug}")])
+        summary.append(f"{endpoint} {n}/{len(owned)}t")
+    print("indexes (datasets/tables): " + " · ".join(summary))
 
     for cname, surf in catalogs.items():
         d = STAGING / "_surface" / (cname or "_combined")
