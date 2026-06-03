@@ -79,14 +79,15 @@
     {
       "rel": "child",
       "title": "🏙️ Helsinki Region — HSY",
-      "href": "https://8et4c.upcloudobjects.com/carto-ogc-connect-helsinki/catalog/helsinki-region-hsy",
+      "href": "https://8et4c.upcloudobjects.com/carto-ogc-connect-helsinki/repo/portolan-hsy-catalog",
       "type": "application/json",
       "portolan:alias": "hsy",
-      "portolan:catalog_type": "iceberg",
+      "portolan:catalog_type": "iceberg-rest-static",
+      "portolan:source_repo": "https://github.com/jatorre/portolan-hsy-catalog",
       "portolan:geospatial": true,
       "portolan:datasets": 1,
       "bbox": [24.15, 60.08, 24.8, 60.4],
-      "description": "Regional planning: SeutuRAMAVA per detailed-plan-block land-use category + unused building-rights reserve (built vs unused floor area by use class), aggregated from the municipal plans across Espoo / Vantaa / Kauniainen."
+      "description": "Regional planning: SeutuRAMAVA per detailed-plan-block land-use category + unused building-rights reserve, aggregated from the municipal plans across Espoo / Vantaa / Kauniainen. This publisher is git-sourced (the repo IS the catalog): metadata in GitHub, published to the bucket as a static Iceberg REST catalog (v2 WKB + v3 native) with STAC + OGC API - Records views."
     },
     {
       "rel": "child",
