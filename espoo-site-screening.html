@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Site screening — data centre near Espoo (60.20°N, 24.65°E)</title>
+<link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet">
+<script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+<style>
+:root{--ink:#0b1f2a;--mut:#5a6b75;--line:#e4e9ec;--lime:#b6e21a;--blue:#1f6feb;--bg:#f6f8f9;}
+*{box-sizing:border-box}
+body{margin:0;font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;color:var(--ink);background:var(--bg)}
+header{padding:26px 32px 18px;border-bottom:1px solid var(--line);background:#fff}
+header .eyebrow{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--blue);font-weight:700}
+header h1{margin:6px 0 4px;font-size:24px}
+header p{margin:0;color:var(--mut);max-width:70ch}
+.wrap{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.05fr);gap:0;height:calc(100vh - 102px)}
+#map{height:100%;width:100%}
+.panel{overflow:auto;padding:22px 28px 60px;background:#fff;border-left:1px solid var(--line)}
+.verdict{background:#0b1f2a;color:#fff;border-radius:12px;padding:16px 18px;margin-bottom:22px}
+.verdict h2{margin:0 0 6px;font-size:15px;color:var(--lime);letter-spacing:.04em;text-transform:uppercase}
+.verdict p{margin:0;font-size:14px;color:#d7e0e5}
+.group{margin-bottom:26px}
+.group > h3{font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--blue);margin:0 0 10px;border-bottom:2px solid var(--lime);display:inline-block;padding-bottom:3px}
+.metric{border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin-bottom:10px;background:#fff}
+.metric .label{font-size:13px;color:var(--mut)}
+.metric .value{font-size:19px;font-weight:700;margin:2px 0 6px}
+.prov{font-size:11.5px;color:var(--mut);border-top:1px dashed var(--line);padding-top:7px}
+.prov .pub{color:var(--ink);font-weight:600}
+.prov .ds{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;color:var(--blue)}
+details{margin-top:6px}
+details summary{cursor:pointer;font-size:11.5px;color:var(--blue);user-select:none}
+pre{margin:6px 0 0;background:#0b1f2a;color:#cfe;border-radius:8px;padding:9px 11px;font-size:11px;overflow:auto;white-space:pre-wrap;word-break:break-word}
+.legend{position:absolute;bottom:14px;left:14px;background:rgba(255,255,255,.94);border:1px solid var(--line);border-radius:8px;padding:9px 11px;font-size:12px}
+.legend div{display:flex;align-items:center;gap:7px;margin:2px 0}
+.sw{width:14px;height:5px;border-radius:2px;display:inline-block}
+.foot{font-size:11.5px;color:var(--mut);margin-top:18px;border-top:1px solid var(--line);padding-top:12px}
+</style></head>
+<body>
+<header>
+  <div class="eyebrow">Portolan · sovereign spatial data infrastructure — live federated query</div>
+  <h1>Site screening: data centre near Espoo &nbsp;<span style="color:var(--mut);font-weight:400">60.20°N, 24.65°E</span></h1>
+  <p>Initial spatial screening composed live across 4 independent EU/Finnish publishers (Iceberg + STAC on European object storage, queried with DuckDB). Every figure carries its publisher, dataset, and the exact query. <b>This is a screening, not a permitting decision.</b></p>
+</header>
+<div class="wrap">
+  <div style="position:relative"><div id="map"></div>
+    <div class="legend">
+      <div><span class="sw" style="background:#e11d48;width:14px;height:14px;border-radius:50%"></span> Candidate site</div>
+      <div><span class="sw" style="background:#1f6feb"></span> Transmission lines (NLS, ≤3 km)</div>
+      <div><span class="sw" style="background:#0ea5a4;height:12px"></span> Groundwater area (SYKE)</div>
+      <div><span class="sw" style="background:#16a34a;height:12px"></span> Protected area (NLS)</div>
+      <div><span class="sw" style="background:#f59e0b;height:12px"></span> 1 km population cell (StatFi)</div>
+    </div>
+  </div>
+  <div class="panel">
+    <div class="verdict">
+      <h2>What the data says</h2>
+      <p>An urban-edge site in <b>Espoon Keskus</b> (postal area 02770): ~800 people in the on-site 1&nbsp;km cell but ~<b>101,000 within 5&nbsp;km</b>, on land Copernicus classes as <b>dense urban fabric</b> beside forest and existing <b>industrial/commercial land</b>. A high-voltage line is <b>~1.1&nbsp;km</b> away (favorable proximity — subject to capacity &amp; permitting). No mapped flood hazard (nearest 1/1000-yr zone 5.4&nbsp;km off); the main environmental flags are a <b>class-1 groundwater area 2.6&nbsp;km</b> away and a Natura 2000 SAC 4.6&nbsp;km off — neither at the site, but both worth watching.</p>
+    </div>
+    <div class="group"><h3>People nearby</h3>
+<div class="metric">
+          <div class="label">People in the 1 km grid cell on-site</div>
+          <div class="value">800</div>
+          <div class="prov"><span class="pub">Statistics Finland (Tilastokeskus)</span> · <span class="ds">vaestoruutu_1km · statfi.v2.statfi_popgrid</span>
+          <details><summary>show query</summary><pre>SELECT vaesto FROM statfi.v2.statfi_popgrid WHERE ST_Contains(ST_GeomFromWKB(geom_wkb), ST_Point(24.65,60.20))</pre></details></div>
+        </div>
+<div class="metric">
+          <div class="label">People within 3 km</div>
+          <div class="value">41,768</div>
+          <div class="prov"><span class="pub">Statistics Finland</span> · <span class="ds">vaestoruutu_1km · statfi.v2.statfi_popgrid</span>
+          <details><summary>show query</summary><pre>SELECT sum(vaesto) FROM statfi.v2.statfi_popgrid WHERE ST_DWithin(ST_Centroid(ST_Transform(ST_GeomFromWKB(geom_wkb),'EPSG:4326','EPSG:3067')), &lt;site_3067&gt;, 3000)</pre></details></div>
+        </div>
+<div class="metric">
+          <div class="label">People within 5 km</div>
+          <div class="value">100,832</div>
+          <div class="prov"><span class="pub">Statistics Finland</span> · <span class="ds">vaestoruutu_1km · statfi.v2.statfi_popgrid</span>
+          <details><summary>show query</summary><pre>SELECT sum(vaesto) FROM statfi.v2.statfi_popgrid WHERE ST_DWithin(ST_Centroid(ST_Transform(geom,3067)), &lt;site_3067&gt;, 5000)</pre></details></div>
+        </div>
+<div class="metric">
+          <div class="label">Postal area 02770 Espoon Keskus — population</div>
+          <div class="value">11,382</div>
+          <div class="prov"><span class="pub">Statistics Finland</span> · <span class="ds">paavo_vaesto · statfi.v2.statfi_paavo</span>
+          <details><summary>show query</summary><pre>SELECT nimi, he_vakiy, hr_mtu FROM statfi.v2.statfi_paavo WHERE ST_Contains(ST_GeomFromWKB(geom_wkb), ST_Point(24.65,60.20))</pre></details></div>
+        </div>
+<div class="metric">
+          <div class="label">… median income (postal area)</div>
+          <div class="value">€25,425</div>
+          <div class="prov"><span class="pub">Statistics Finland</span> · <span class="ds">paavo_vaesto · statfi.v2.statfi_paavo</span>
+          <details><summary>show query</summary><pre>-- same row, column hr_mtu (median income, EUR)</pre></details></div>
+        </div>
+</div>
+<div class="group"><h3>Land use</h3>
+<div class="metric">
+          <div class="label">Land-use class on-site</div>
+          <div class="value">Discontinuous dense urban fabric (50–80% sealed)</div>
+          <div class="prov"><span class="pub">Copernicus (EU)</span> · <span class="ds">urbanatlas · cop.v2.urbanatlas</span>
+          <details><summary>show query</summary><pre>SELECT class_2018 FROM cop.v2.urbanatlas WHERE ST_Contains(ST_GeomFromWKB(geom_wkb), ST_Point(24.65,60.20))</pre></details></div>
+        </div>
+<div class="metric">
+          <div class="label">Forest within 1 km</div>
+          <div class="value">97.4 ha</div>
+          <div class="prov"><span class="pub">Copernicus (EU)</span> · <span class="ds">urbanatlas · cop.v2.urbanatlas</span>
+          <details><summary>show query</summary><pre>SELECT class_2018, sum(ST_Area(ST_Intersection(geom_3067, ST_Buffer(&lt;site_3067&gt;,1000))))/1e4 ha FROM cop.v2.urbanatlas GROUP BY 1 ORDER BY 2 DESC</pre></details></div>
+        </div>
+<div class="metric">
+          <div class="label">Industrial / commercial / public land within 1 km</div>
+          <div class="value">25.7 ha</div>
+          <div class="prov"><span class="pub">Copernicus (EU)</span> · <span class="ds">urbanatlas · cop.v2.urbanatlas</span>
+          <details><summary>show query</summary><pre>-- same GROUP BY query; class 'Industrial, commercial, public, military and private units'</pre></details></div>
+        </div>
+</div>
+<div class="group"><h3>Environmental constraints</h3>
+<div class="metric">
+          <div class="label">Nearest mapped flood-hazard zone</div>
+          <div class="value">5,369 m (1-in-1000-yr zone)</div>
+          <div class="prov"><span class="pub">Finnish Environment Institute (SYKE)</span> · <span class="ds">tulvavaarakartta · syke.v2.flood_hazard</span>
+          <details><summary>show query</summary><pre>SELECT tulvasuojtoistuvuus, min(ST_Distance(geom_3067, &lt;site_3067&gt;)) FROM syke.v2.flood_hazard -- site lies well outside any zone</pre></details></div>
+        </div>
+<div class="metric">
+          <div class="label">Nearest classified groundwater area</div>
+          <div class="value">2,611 m — Puolarmetsä, class 1 (vital for water supply)</div>
+          <div class="prov"><span class="pub">SYKE</span> · <span class="ds">pohjavesialue · syke.v2.groundwater</span>
+          <details><summary>show query</summary><pre>SELECT pvaluenimi, pvalueluokka, min(ST_Distance(geom_3067, &lt;site_3067&gt;)) FROM syke.v2.groundwater</pre></details></div>
+        </div>
+<div class="metric">
+          <div class="label">Nearest Natura 2000 site</div>
+          <div class="value">4,560 m — Espoonlahti–Saunalahti (SAC)</div>
+          <div class="prov"><span class="pub">SYKE</span> · <span class="ds">natura2000 · syke.v2.natura2000</span>
+          <details><summary>show query</summary><pre>SELECT nimiSuomi, alueTyyppi, min(ST_Distance(geom_3067, &lt;site_3067&gt;)) FROM syke.v2.natura2000</pre></details></div>
+        </div>
+<div class="metric">
+          <div class="label">Nearest statutory protected area</div>
+          <div class="value">1,545 m</div>
+          <div class="prov"><span class="pub">National Land Survey (NLS)</span> · <span class="ds">luonnonsuojelualue · nls.v2.protected</span>
+          <details><summary>show query</summary><pre>SELECT min(ST_Distance(ST_Transform(ST_GeomFromWKB(geom_wkb),'EPSG:4326','EPSG:3067'), &lt;site_3067&gt;)) FROM nls.v2.protected</pre></details></div>
+        </div>
+<div class="metric">
+          <div class="label">Nearest lake / water body</div>
+          <div class="value">2,377 m</div>
+          <div class="prov"><span class="pub">NLS</span> · <span class="ds">jarvi · nls.v2.water</span>
+          <details><summary>show query</summary><pre>SELECT min(ST_Distance(geom_3067, &lt;site_3067&gt;)) FROM nls.v2.water -- cooling/context, not a permission</pre></details></div>
+        </div>
+</div>
+<div class="group"><h3>Proximity to power</h3>
+<div class="metric">
+          <div class="label">Nearest high-voltage transmission line</div>
+          <div class="value">1,104 m</div>
+          <div class="prov"><span class="pub">National Land Survey (NLS)</span> · <span class="ds">sahkolinja · nls.v2.power_lines</span>
+          <details><summary>show query</summary><pre>SELECT min(ST_Distance(ST_Transform(ST_GeomFromWKB(geom_wkb),'EPSG:4326','EPSG:3067'), ST_Transform(ST_Point(24.65,60.20),'EPSG:4326','EPSG:3067'))) FROM nls.v2.power_lines</pre></details></div>
+        </div>
+<div class="metric">
+          <div class="label">Transmission-line segments within 3 km</div>
+          <div class="value">16</div>
+          <div class="prov"><span class="pub">NLS</span> · <span class="ds">sahkolinja · nls.v2.power_lines</span>
+          <details><summary>show query</summary><pre>SELECT count(*) FROM nls.v2.power_lines WHERE ST_DWithin(geom_3067, &lt;site_3067&gt;, 3000)</pre></details></div>
+        </div>
+</div>
+    <div class="foot">
+      Sources: National Land Survey of Finland (NLS), Finnish Environment Institute (SYKE), Copernicus / EU, Statistics Finland — each an independent Apache Iceberg catalog on European object storage, attached anonymously and queried live with DuckDB. Distances computed in EPSG:3067. <code>&lt;site_3067&gt;</code> = <code>ST_Transform(ST_Point(24.65,60.20),'EPSG:4326','EPSG:3067')</code>; <code>geom_3067</code> abbreviates the same transform of each row's <code>geom_wkb</code>.
+    </div>
+  </div>
+</div>
+<script>
+const FC = {"type": "FeatureCollection", "features": [{"type": "Feature", "properties": {"kind": "site"}, "geometry": {"type": "Point", "coordinates": [24.65, 60.2]}}, {"type": "Feature", "properties": {"kind": "power"}, "geometry": {"type": "LineString", "coordinates": [[24.5934852, 60.2069542], [24.5971411, 60.2076695], [24.6009162, 60.2084133], [24.6046281, 60.2091395], [24.6046389, 60.2091416], [24.60798, 60.2098042], [24.6100433, 60.2104692], [24.6114984, 60.2109434], [24.6150226, 60.2120752], [24.6150342, 60.2120789], [24.6175993, 60.2129094], [24.6192821, 60.213436], [24.62015, 60.2137076], [24.6229168, 60.2145734], [24.6253787, 60.2153712], [24.6275716, 60.2161249], [24.6281641, 60.2163285], [24.6298323, 60.2169019]]}}, {"type": "Feature", "properties": {"kind": "power"}, "geometry": {"type": "LineString", "coordinates": [[24.6454382, 60.2216448], [24.6420864, 60.2199281], [24.6420649, 60.2199197], [24.6375254, 60.2181328], [24.6374737, 60.2181125], [24.6373106, 60.2180483], [24.6347419, 60.217033], [24.63384, 60.2166765], [24.6338188, 60.2166693], [24.6334497, 60.2165433], [24.6331991, 60.2164577], [24.6308501, 60.2156556], [24.6308322, 60.2156527], [24.6281429, 60.2152191], [24.6275826, 60.2151287], [24.6232191, 60.214495], [24.618149, 60.2128576], [24.6167722, 60.2124121], [24.6157123, 60.2120692], [24.6128845, 60.2111533], [24.6111385, 60.2105956], [24.6100578, 60.2102503], [24.609219, 60.2099808], [24.6081476, 60.2096365], [24.6081428, 60.209635], [24.6034709, 60.208707], [24.6034643, 60.2087057], [24.5984762, 60.2077275], [24.5942527, 60.2068963], [24.5933883, 60.2067654], [24.5933562, 60.2067605], [24.5932866, 60.20675], [24.5908189, 60.2063759], [24.5870656, 60.2059656], [24.5798327, 60.2053489], [24.5739441, 60.2051128], [24.5738703, 60.2051078], [24.5726102, 60.2050576], [24.5674703, 60.2048524]]}}, {"type": "Feature", "properties": {"kind": "power"}, "geometry": {"type": "LineString", "coordinates": [[24.6434838, 60.2213172], [24.6444063, 60.2217046], [24.6454591, 60.222036], [24.646533, 60.2223891], [24.6469366, 60.2225253], [24.6476581, 60.2227686], [24.6487546, 60.2231856], [24.6497714, 60.2235583], [24.6513583, 60.224147], [24.6535027, 60.2249977], [24.6535165, 60.2250032], [24.6540912, 60.225221]]}}, {"type": "Feature", "properties": {"kind": "power"}, "geometry": {"type": "LineString", "coordinates": [[24.630959, 60.2171679], [24.6314793, 60.2173283], [24.6337606, 60.2180073], [24.6337879, 60.2180164], [24.6367714, 60.2190061], [24.6376356, 60.2192944], [24.6398667, 60.2200396], [24.6424881, 60.2209152], [24.6463373, 60.2221895], [24.6475295, 60.2225835], [24.6498696, 60.2234548], [24.6522188, 60.2243419], [24.6522245, 60.2243441], [24.6550516, 60.2254074], [24.6550595, 60.2254103], [24.6587596, 60.226581], [24.6631239, 60.2279614], [24.6631349, 60.2279648], [24.6666703, 60.2290429], [24.6680335, 60.2294384], [24.669163, 60.2297662], [24.6697774, 60.2299544]]}}, {"type": "Feature", "properties": {"kind": "power"}, "geometry": {"type": "LineString", "coordinates": [[24.648612, 60.2281279], [24.6492331, 60.2278264], [24.6500766, 60.2273741], [24.6522008, 60.2262349], [24.6540912, 60.225221]]}}, {"type": "Feature", "properties": {"kind": "power"}, "geometry": {"type": "LineString", "coordinates": [[24.6566777, 60.2260805], [24.6627887, 60.227994]]}}, {"type": "Feature", "properties": {"kind": "power"}, "geometry": {"type": "LineString", "coordinates": [[24.6454382, 60.2216448], [24.6463391, 60.221955], [24.6464175, 60.2219815], [24.6499156, 60.2231641], [24.6499201, 60.2231659], [24.6548376, 60.225099], [24.6585882, 60.2262903], [24.6636229, 60.2278889], [24.6638096, 60.227947], [24.6641248, 60.2280451], [24.664172, 60.2280592], [24.6669871, 60.2289017], [24.6678707, 60.2291665], [24.669861, 60.2297627], [24.6699771, 60.2298055]]}}, {"type": "Feature", "properties": {"kind": "power"}, "geometry": {"type": "LineString", "coordinates": [[24.6540912, 60.225221], [24.6547095, 60.2254418], [24.6555298, 60.2256999], [24.6556958, 60.2257521], [24.6558469, 60.2258019], [24.6566777, 60.2260805]]}}, {"type": "Feature", "properties": {"kind": "power"}, "geometry": {"type": "LineString", "coordinates": [[24.6795072, 60.209792], [24.6810483, 60.2092889], [24.6814629, 60.2091536], [24.6821567, 60.2089631], [24.6853268, 60.2080982], [24.6855918, 60.2079962], [24.6894881, 60.2069275], [24.6897182, 60.206789]]}}, {"type": "Feature", "properties": {"kind": "power"}, "geometry": {"type": "LineString", "coordinates": [[24.6659741, 60.1940471], [24.6661893, 60.1942283]]}}, {"type": "Feature", "properties": {"kind": "power"}, "geometry": {"type": "LineString", "coordinates": [[24.6584533, 60.1889716], [24.6567147, 60.1898998]]}}, {"type": "Feature", "properties": {"kind": "power"}, "geometry": {"type": "LineString", "coordinates": [[24.6584533, 60.1889716], [24.6613964, 60.1874091], [24.6661157, 60.1849033], [24.6665516, 60.1846831]]}}, {"type": "Feature", "properties": {"kind": "power"}, "geometry": {"type": "LineString", "coordinates": [[24.6665516, 60.1846831], [24.667283, 60.1842681], [24.6674165, 60.1841918], [24.6681181, 60.1837909], [24.6696134, 60.1830351]]}}, {"type": "Feature", "properties": {"kind": "power"}, "geometry": {"type": "LineString", "coordinates": [[24.6333044, 60.1665207], [24.6345556, 60.1670908], [24.6360695, 60.1677896], [24.6378308, 60.1685996], [24.639535, 60.168994], [24.6404447, 60.169204], [24.643021, 60.169523], [24.6440301, 60.1696479], [24.6453214, 60.1698064], [24.6477084, 60.1700995], [24.6507672, 60.1704808], [24.6513028, 60.1705476], [24.6550619, 60.1709956], [24.6568214, 60.1712053], [24.6582938, 60.1713865], [24.6582985, 60.1713885], [24.6589968, 60.1716919], [24.6595604, 60.1719368], [24.6611473, 60.1726264], [24.6640034, 60.1738673], [24.6656247, 60.1745662], [24.6663162, 60.1748644], [24.6679884, 60.1755862], [24.668841, 60.1759542], [24.6691545, 60.1760896], [24.6716081, 60.1751534], [24.6724934, 60.1748156], [24.6740527, 60.1742206], [24.6756991, 60.1746538], [24.6766906, 60.1749147], [24.6773438, 60.1750871], [24.6776559, 60.1751695], [24.6793187, 60.1756085]]}}, {"type": "Feature", "properties": {"kind": "power"}, "geometry": {"type": "LineString", "coordinates": [[24.6895857, 60.1780534], [24.6896101, 60.1780667], [24.6898582, 60.1784015], [24.6899719, 60.1785638], [24.6900716, 60.1788377], [24.6900183, 60.1790367], [24.6894974, 60.1794056], [24.6891806, 60.1796346], [24.6887587, 60.1799062], [24.6886176, 60.1799996], [24.6882455, 60.1802502], [24.6878063, 60.1805654], [24.687414, 60.1808298], [24.6871346, 60.1810248], [24.6867008, 60.1813276], [24.6859917, 60.1818458], [24.6855643, 60.1819332], [24.6850869, 60.1818027], [24.6850306, 60.1817828]]}}, {"type": "Feature", "properties": {"kind": "power"}, "geometry": {"type": "LineString", "coordinates": [[24.6943463, 60.185046], [24.6950232, 60.18455], [24.695854, 60.1839474], [24.696611, 60.1833989], [24.6973633, 60.1828463], [24.6981244, 60.1822653], [24.6995971, 60.1811235], [24.7006533, 60.1809419], [24.7010169, 60.1808794]]}}, {"type": "Feature", "properties": {"kind": "groundwater"}, "geometry": {"type": "MultiPolygon", "coordinates": [[[[24.68548697, 60.18239817], [24.68679673, 60.18344261], [24.68792602, 60.18434133], [24.68907464, 60.18564425], [24.69004706, 60.18741924], [24.6908004, 60.18824011], [24.69151443, 60.18894151], [24.69463736, 60.18964919], [24.69532671, 60.18866338], [24.69549192, 60.18766846], [24.69579337, 60.18677093], [24.69570532, 60.18598542], [24.69564998, 60.18541429], [24.69667438, 60.18441053], [24.70006585, 60.1836617], [24.70251764, 60.18270645], [24.70601628, 60.18075959], [24.70894931, 60.17905232], [24.71246687, 60.17716503], [24.70966178, 60.17635634], [24.70792437, 60.17562546], [24.70606345, 60.17564077], [24.70595736, 60.17442731], [24.70442701, 60.17380688], [24.70472974, 60.17288561], [24.70547395, 60.17247087], [24.70352169, 60.17174808], [24.70473467, 60.17008236], [24.70235753, 60.16896019], [24.69965538, 60.17010115], [24.69700509, 60.17186065], [24.69373125, 60.17094844], [24.69285505, 60.17188347], [24.68902005, 60.17217298], [24.6890043, 60.17307548], [24.68890331, 60.17383394], [24.68821241, 60.17484344], [24.68729, 60.17575387], [24.6865898, 60.1762168], [24.68543207, 60.17742008], [24.68868482, 60.17999513], [24.68592449, 60.18194254], [24.68548697, 60.18239817]]]]}}, {"type": "Feature", "properties": {"kind": "protected"}, "geometry": {"type": "Polygon", "coordinates": [[[24.6173174, 60.2122769], [24.6175508, 60.2123465], [24.61897, 60.2127693], [24.6191722, 60.2128295], [24.6191974, 60.212837], [24.6196265, 60.2129648], [24.6200401, 60.2130881], [24.6201295, 60.2130741], [24.620203, 60.2130626], [24.6204447, 60.2130247], [24.6208252, 60.2129651], [24.621533, 60.2128542], [24.6227109, 60.2126696], [24.623701, 60.2124968], [24.6237245, 60.2124407], [24.6237741, 60.2123226], [24.6239712, 60.2121055], [24.6243476, 60.2119166], [24.624466, 60.2118849], [24.6246162, 60.2118446], [24.6249437, 60.2117568], [24.6253244, 60.2116483], [24.625557, 60.2115539], [24.6258332, 60.2114417], [24.6261344, 60.2113933], [24.6262384, 60.2113765], [24.6262508, 60.2113609], [24.6262605, 60.2113492], [24.6262624, 60.2113469], [24.6262646, 60.2113443], [24.6262882, 60.2113158], [24.6262922, 60.2113109], [24.6262929, 60.2113101], [24.6263237, 60.2112729], [24.6264649, 60.2111027], [24.6265214, 60.2110344], [24.6265233, 60.2110322], [24.6265444, 60.2110067], [24.6265515, 60.2109982], [24.6266192, 60.2109165], [24.6266545, 60.2108739], [24.6267056, 60.2108855], [24.6267066, 60.2108858], [24.6267192, 60.2108887], [24.6267917, 60.2109053], [24.6268559, 60.21092], [24.6269133, 60.2109331], [24.6269144, 60.2109334], [24.6269155, 60.2109336], [24.6269166, 60.2109339], [24.6271491, 60.2109871], [24.6272642, 60.2110135], [24.6272663, 60.2110139], [24.6274108, 60.211047], [24.6274486, 60.2110557], [24.627477, 60.2110622], [24.6274982, 60.2110671], [24.6275605, 60.2110813], [24.6276037, 60.2110912], [24.6277655, 60.2111282], [24.6277666, 60.2111285], [24.6277677, 60.2111288], [24.6277688, 60.211129], [24.6280013, 60.2111822], [24.6281184, 60.2112091], [24.6281195, 60.2112093], [24.6281206, 60.2112096], [24.6281217, 60.2112098], [24.6282872, 60.2112477], [24.6286177, 60.2113234], [24.6286188, 60.2113236], [24.6286199, 60.2113239], [24.628621, 60.2113241], [24.6288991, 60.2113878], [24.6289069, 60.2113896], [24.6289101, 60.2113903], [24.6289107, 60.2113904], [24.6289706, 60.2114042], [24.6289717, 60.2114044], [24.6289728, 60.2114047], [24.6289739, 60.2114049], [24.6290591, 60.2114244], [24.6290783, 60.2114288], [24.6291549, 60.2114464], [24.6291588, 60.2114411], [24.6293597, 60.2111715], [24.6296001, 60.2109717], [24.6296331, 60.2109512], [24.6298209, 60.2108344], [24.6298516, 60.2108153], [24.6299321, 60.2107653], [24.6300821, 60.2106721], [24.6299102, 60.2105024], [24.6296743, 60.2102121], [24.6295874, 60.2101051], [24.6292242, 60.2096863], [24.6289055, 60.2093383], [24.6287355, 60.2091527], [24.6284469, 60.2088866], [24.6283118, 60.208762], [24.6279295, 60.2084927], [24.6274863, 60.2081727], [24.6274682, 60.2081596], [24.6271691, 60.2079893], [24.6264714, 60.207592], [24.6258043, 60.207293], [24.6250772, 60.2069672], [24.6239363, 60.2065256], [24.6236444, 60.2064126], [24.6233548, 60.2063298], [24.6227589, 60.2061593], [24.6220404, 60.2059582], [24.6220287, 60.2059549], [24.6217255, 60.2058701], [24.6202798, 60.2056109], [24.6203447, 60.205827], [24.6203711, 60.205878], [24.6205302, 60.2061864], [24.6210544, 60.2064703], [24.6210685, 60.2065035], [24.6211366, 60.2066896], [24.6213989, 60.2072394], [24.6214149, 60.2072394], [24.6214168, 60.2072432], [24.6215696, 60.2073292], [24.6216052, 60.2076464], [24.6214888, 60.2079817], [24.6217476, 60.2081071], [24.6220253, 60.2083162], [24.6222405, 60.2085051], [24.6222771, 60.2085373], [24.6224481, 60.2087194], [24.6218892, 60.2088094], [24.619874, 60.2090433], [24.6185257, 60.2091997], [24.6179729, 60.2092639], [24.6180527, 60.2095485], [24.6180683, 60.2096522], [24.6180753, 60.2096989], [24.6183617, 60.2099039], [24.6189085, 60.2102587], [24.6189692, 60.210298], [24.6195915, 60.2106578], [24.6195835, 60.210768], [24.6185516, 60.2114543], [24.6182594, 60.2116486], [24.6181383, 60.2117291], [24.6181223, 60.2117397], [24.6180137, 60.2118481], [24.6178187, 60.2119608], [24.6177192, 60.2120184], [24.6173174, 60.2122769]]]}}, {"type": "Feature", "properties": {"kind": "popcell"}, "geometry": {"type": "Polygon", "coordinates": [[[24.6548, 60.2001], [24.6542, 60.209], [24.6361, 60.2087], [24.6368, 60.1997], [24.6548, 60.2001]]]}}]};
+const map = new maplibregl.Map({
+  container:'map',
+  style:'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json',
+  center:[24.65,60.20], zoom:11.5
+});
+function sub(kind){return {type:'FeatureCollection',features:FC.features.filter(f=>f.properties.kind===kind)};}
+map.on('load',()=>{
+  map.addSource('popcell',{type:'geojson',data:sub('popcell')});
+  map.addLayer({id:'popcell',type:'fill',source:'popcell',paint:{'fill-color':'#f59e0b','fill-opacity':0.18,'fill-outline-color':'#f59e0b'}});
+  map.addSource('gw',{type:'geojson',data:sub('groundwater')});
+  map.addLayer({id:'gw',type:'fill',source:'gw',paint:{'fill-color':'#0ea5a4','fill-opacity':0.20,'fill-outline-color':'#0ea5a4'}});
+  map.addSource('prot',{type:'geojson',data:sub('protected')});
+  map.addLayer({id:'prot',type:'fill',source:'prot',paint:{'fill-color':'#16a34a','fill-opacity':0.30,'fill-outline-color':'#16a34a'}});
+  map.addSource('power',{type:'geojson',data:sub('power')});
+  map.addLayer({id:'power',type:'line',source:'power',paint:{'line-color':'#1f6feb','line-width':2.4}});
+  map.addSource('site',{type:'geojson',data:sub('site')});
+  map.addLayer({id:'site',type:'circle',source:'site',paint:{'circle-radius':9,'circle-color':'#e11d48','circle-stroke-color':'#fff','circle-stroke-width':3}});
+  // 5 km context ring
+  const ring=turfCircle([24.65,60.20],5);
+  map.addSource('ring',{type:'geojson',data:ring});
+  map.addLayer({id:'ring',type:'line',source:'ring',paint:{'line-color':'#e11d48','line-dasharray':[2,2],'line-width':1.2,'line-opacity':0.6}});
+});
+function turfCircle(c,km){const pts=[],n=64;for(let i=0;i<=n;i++){const a=i/n*2*Math.PI;const dx=km/111.32/Math.cos(c[1]*Math.PI/180)*Math.cos(a);const dy=km/111.32*Math.sin(a);pts.push([c[0]+dx,c[1]+dy]);}return{type:'Feature',geometry:{type:'LineString',coordinates:pts}};}
+</script>
+</body></html>

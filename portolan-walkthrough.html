@@ -1,0 +1,716 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Portolan — how an agent answers a siting question (live walkthrough)</title>
+<style>
+:root{
+  --ink:#0b1f2a; --ink2:#13303f; --mut:#8aa0ac; --mut2:#5a6b75;
+  --line:#1e3a49; --lime:#b6e21a; --blue:#4d9bff; --blue2:#1f6feb;
+  --bg:#081820; --card:#0e2530; --code:#06141b;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--bg);color:#eaf2f5;
+  font:16px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  -webkit-font-smoothing:antialiased;overflow:hidden}
+#deck{height:100vh;width:100vw;position:relative}
+.slide{position:absolute;inset:0;display:none;flex-direction:column;justify-content:center;
+  padding:5vh 7vw;animation:fade .35s ease;overflow:auto}
+.slide.active{display:flex}
+@keyframes fade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.eyebrow{font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:var(--blue);font-weight:700;margin-bottom:14px}
+h1{font-size:46px;line-height:1.08;margin:0 0 18px;font-weight:800;letter-spacing:-.01em}
+h2{font-size:30px;line-height:1.15;margin:0 0 16px;font-weight:800;letter-spacing:-.01em}
+h2 .step{color:var(--lime);font-variant-numeric:tabular-nums}
+.lead{font-size:20px;color:#cfe0e8;max-width:60ch;margin:0 0 8px}
+.muted{color:var(--mut)}
+.lime{color:var(--lime)} .blue{color:var(--blue)}
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:26px;align-items:start}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px 20px}
+.card h3{margin:0 0 10px;font-size:14px;letter-spacing:.05em;text-transform:uppercase;color:var(--blue)}
+pre{background:var(--code);border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin:10px 0 0;
+  font:13px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;color:#bfe3ff;overflow:auto;white-space:pre-wrap;word-break:break-word}
+pre .c{color:#5f7d8c} pre .k{color:var(--lime)} pre .s{color:#ffd479} pre .fn{color:#7fd6ff} pre .o{color:#ff9bb0}
+.term{background:#04131a}
+.term .prompt{color:var(--lime)}
+.term .out{color:#9fc8d8}
+.tag{display:inline-block;background:#0c2b1a;color:var(--lime);border:1px solid #1c5a36;border-radius:999px;
+  font-size:12px;font-weight:600;padding:3px 11px;margin:0 6px 6px 0}
+.tag.b{background:#0a2540;color:var(--blue);border-color:#1c4a7a}
+ul.clean{list-style:none;padding:0;margin:10px 0 0}
+ul.clean li{padding:9px 0 9px 26px;position:relative;border-bottom:1px solid var(--line);font-size:16px}
+ul.clean li:last-child{border-bottom:0}
+ul.clean li:before{content:"→";position:absolute;left:0;color:var(--lime);font-weight:700}
+table{border-collapse:collapse;width:100%;margin-top:10px;font-size:15px}
+th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+th{color:var(--blue);font-size:12px;letter-spacing:.05em;text-transform:uppercase}
+td .v{font-weight:700;color:#fff}
+td code{font-family:ui-monospace,Menlo,monospace;font-size:12.5px;color:var(--lime)}
+.big{font-size:40px;font-weight:800;color:#fff;line-height:1}
+.kpi{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-top:14px}
+.kpi .card{padding:16px}
+.kpi .n{font-size:30px;font-weight:800;color:var(--lime);line-height:1}
+.kpi .l{font-size:13px;color:var(--mut);margin-top:6px}
+.flow{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:18px}
+.flow .node{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px 16px;font-weight:700}
+.flow .node.on{border-color:var(--lime);color:var(--lime);box-shadow:0 0 0 1px var(--lime) inset}
+.flow .arr{color:var(--mut);font-size:20px}
+iframe{width:100%;height:62vh;border:1px solid var(--line);border-radius:14px;background:#fff}
+.hud{position:fixed;bottom:16px;right:22px;font-size:13px;color:var(--mut);font-variant-numeric:tabular-nums;z-index:5}
+.hud b{color:#eaf2f5}
+.bar{position:fixed;top:0;left:0;height:3px;background:var(--lime);z-index:5;transition:width .3s}
+.brand{position:fixed;bottom:16px;left:22px;font-size:13px;color:var(--mut);z-index:5;letter-spacing:.04em}
+.brand b{color:var(--lime)}
+.hint{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);font-size:12px;color:var(--mut2);z-index:5}
+.small{font-size:14px}
+.split{display:grid;grid-template-columns:1.1fr 1fr;gap:26px;align-items:center}
+.pubgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:12px}
+.pub{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:11px 13px;font-size:14px}
+.pub b{display:block;font-size:14px} .pub span{font-size:12px;color:var(--mut)}
+.pub.use{border-color:var(--lime)}
+.pub.use b{color:var(--lime)}
+.pub.skip{opacity:.5}
+</style></head>
+<body>
+<div class="bar" id="bar"></div>
+<div id="deck">
+
+<!-- 1 TITLE -->
+<section class="slide active">
+  <div class="eyebrow">OGC Connect Helsinki · Portolan — sovereign, agent-ready spatial data infrastructure</div>
+  <h1>How an AI agent answers a siting question —<br><span class="lime">live, on sovereign data</span></h1>
+  <p class="lead">A walkthrough of <b>one real run</b>: <i>“Is this a good data-centre site near Espoo?”</i> → a federated query across four independent EU/Finnish publishers → a cited, re-runnable answer.</p>
+  <div class="flow">
+    <span class="node on">Registry</span><span class="arr">→</span>
+    <span class="node">Catalog</span><span class="arr">→</span>
+    <span class="node">Dataset</span><span class="arr">→</span>
+    <span class="node">Query</span><span class="arr">→</span>
+    <span class="node">Answer</span>
+  </div>
+  <p class="muted small" style="margin-top:22px">The agent does not know the datasets in advance. It <b>discovers</b> them — the way you’d explore a set of tools.</p>
+</section>
+
+<!-- 2 THE QUESTION -->
+<section class="slide">
+  <div class="eyebrow">The question — exactly as the user asked it</div>
+  <h2>A real estate / infrastructure question, in plain language</h2>
+  <div class="split">
+    <pre class="term"><span class="prompt">user ▸</span> I'm evaluating a site for a <b>data centre near Espoo,
+Finland</b> (about <b>60.20°N, 24.65°E</b>).
+
+Using the spatial data infrastructure, what does the
+data say about this location — <span class="lime">people nearby</span>,
+<span class="lime">land use</span>, <span class="lime">environmental constraints</span>, and
+<span class="lime">proximity to power</span>?
+
+<b>Cite the publisher and the exact query behind every figure.</b></pre>
+    <div>
+      <div class="card"><h3>Four asks, one point</h3>
+        <ul class="clean small">
+          <li><b>People nearby</b> — who lives around the site</li>
+          <li><b>Land use</b> — what’s on the ground</li>
+          <li><b>Environmental constraints</b> — flood, protected, groundwater</li>
+          <li><b>Proximity to power</b> — distance to the grid</li>
+        </ul>
+      </div>
+      <p class="muted small" style="margin-top:14px">The hard requirement — <span class="lime">“cite the publisher and exact query”</span> — is what an SDI built for provenance can actually deliver.</p>
+    </div>
+  </div>
+</section>
+
+<!-- 3 SKILL LOADS -->
+<section class="slide">
+  <div class="eyebrow">Step 1 — the skill is loaded</div>
+  <h2><span class="step">①</span> The <code class="lime">sdi</code> skill triggers — a generic discovery loop</h2>
+  <div class="cols">
+    <div>
+      <p class="lead">It carries <b>no hard-coded datasets</b>. Everything specific — endpoints, schemas, how to query each source — lives <b>in the catalogs’ own metadata</b>. The skill stays generic, so it works as the federation grows from 9 sources to many.</p>
+      <div style="margin-top:14px">
+        <span class="tag b">registry → pick a catalog</span>
+        <span class="tag b">catalog → browse datasets</span>
+        <span class="tag b">dataset → read schema + semantics</span>
+        <span class="tag b">compose SQL yourself</span>
+        <span class="tag b">synthesize an artifact</span>
+      </div>
+    </div>
+    <div class="card">
+      <h3>Why “discover”, not “configure”</h3>
+      <ul class="clean small">
+        <li>Adding a publisher = <b>one new link</b> in the registry — no skill code changes</li>
+        <li>Each dataset is <b>self-describing</b>: STAC index + OSI semantics + CRS + schema</li>
+        <li>The agent reads metadata at each step and <b>writes its own queries</b></li>
+        <li>Runs on <b>open files + an open engine</b> (Iceberg/STAC on EU object storage, DuckDB)</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- 4 REGISTRY -->
+<section class="slide">
+  <div class="eyebrow">Step 2 — find the data: fetch the root registry (a catalog of catalogs)</div>
+  <h2><span class="step">②</span> One fetch returns the whole federation</h2>
+  <div class="split">
+    <div>
+      <pre class="term"><span class="prompt">$</span> curl <span class="s">…/catalog/stac.json</span>
+<span class="out">→ Catalog "Portolan — Helsinki federation"
+  9 publishers · 18 datasets
+  each child = an independent, sovereign publisher
+  with its own Iceberg endpoint + WGS84 bbox</span></pre>
+      <p class="muted small" style="margin-top:12px">Each <code>child</code> link carries a <b>description</b> (what it holds) and a <b>bbox</b> (its extent) — enough to choose <i>before</i> attaching anything.</p>
+    </div>
+    <div class="pubgrid">
+      <div class="pub use"><b>🇫🇮 NLS</b><span>power, water, protected, buildings, DEM</span></div>
+      <div class="pub use"><b>🇪🇺 Copernicus</b><span>NDVI, Urban Atlas land use</span></div>
+      <div class="pub use"><b>🇫🇮 SYKE</b><span>flood, Natura 2000, groundwater</span></div>
+      <div class="pub"><b>🏙️ HSY</b><span>building-rights reserve</span></div>
+      <div class="pub"><b>⚡ Fingrid</b><span>national grid load</span></div>
+      <div class="pub use"><b>📊 Statistics FI</b><span>population grid, Paavo</span></div>
+      <div class="pub"><b>🧭 Location FI</b><span>YKR zones, temperature</span></div>
+      <div class="pub"><b>🇪🇺 Eurostat</b><span>electricity prices</span></div>
+      <div class="pub"><b>🌍 Overture</b><span>global places (POI)</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- SCALE LADDER -->
+<section class="slide">
+  <div class="eyebrow">One federation, every scale — super-local to worldwide</div>
+  <h2>From a city block to the whole planet — <span class="lime">one query reaches them all</span></h2>
+  <style>
+    .scalewrap{display:grid;grid-template-columns:480px 1fr;gap:30px;align-items:center;margin-top:6px}
+    .tier{display:grid;grid-template-columns:18px 1fr;gap:12px;padding:11px 0;border-bottom:1px solid var(--line);align-items:start}
+    .tier:last-child{border-bottom:0}
+    .dot{width:14px;height:14px;border-radius:50%;margin-top:4px}
+    .tier .tname{font-size:16px;font-weight:700}
+    .tier .textent{font-size:12.5px;color:var(--mut);margin:1px 0 6px}
+    .tier .tpubs{display:flex;gap:6px;flex-wrap:wrap}
+    .tchip{font-size:12px;border-radius:7px;padding:3px 9px;background:#04131a;border:1px solid var(--line)}
+  </style>
+  <div class="scalewrap">
+    <svg viewBox="0 0 480 440" width="100%" style="max-height:62vh">
+      <circle cx="225" cy="222" r="205" fill="#f59e0b14" stroke="#f59e0b" stroke-width="1.5"/>
+      <circle cx="225" cy="222" r="150" fill="#0ea5a414" stroke="#0ea5a4" stroke-width="1.5"/>
+      <circle cx="225" cy="222" r="95"  fill="#4d9bff14" stroke="#4d9bff" stroke-width="1.5"/>
+      <circle cx="225" cy="222" r="45"  fill="#b6e21a1f" stroke="#b6e21a" stroke-width="1.5"/>
+      <circle cx="225" cy="222" r="6" fill="#e11d48" stroke="#fff" stroke-width="2"/>
+      <text x="225" y="234" text-anchor="middle" font-size="13" fill="#e11d48" font-weight="700">📍</text>
+      <text x="225" y="200" text-anchor="middle" font-size="11" fill="#b6e21a" font-weight="700">LOCAL</text>
+      <text x="225" y="142" text-anchor="middle" font-size="11" fill="#4d9bff" font-weight="700">NATIONAL</text>
+      <text x="225" y="87"  text-anchor="middle" font-size="11" fill="#0ea5a4" font-weight="700">EU</text>
+      <text x="225" y="32"  text-anchor="middle" font-size="11" fill="#f59e0b" font-weight="700">GLOBAL</text>
+    </svg>
+    <div>
+      <div class="tier"><span class="dot" style="background:#b6e21a"></span><div>
+        <div class="tname">Local · regional</div><div class="textent">a few city blocks → a metropolitan region</div>
+        <div class="tpubs"><span class="tchip">🏙️ HSY — municipal detailed plans (Espoo · Vantaa · Kauniainen)</span></div></div></div>
+      <div class="tier"><span class="dot" style="background:#4d9bff"></span><div>
+        <div class="tname">National</div><div class="textent">all of Finland</div>
+        <div class="tpubs"><span class="tchip">🇫🇮 NLS</span><span class="tchip">SYKE</span><span class="tchip">Statistics Finland</span><span class="tchip">Fingrid</span><span class="tchip">Location Finland</span></div></div></div>
+      <div class="tier"><span class="dot" style="background:#0ea5a4"></span><div>
+        <div class="tname">EU · continental</div><div class="textent">Europe</div>
+        <div class="tpubs"><span class="tchip">🇪🇺 Copernicus</span><span class="tchip">Eurostat</span></div></div></div>
+      <div class="tier"><span class="dot" style="background:#f59e0b"></span><div>
+        <div class="tname">Global</div><div class="textent">the whole planet — bbox matches anywhere</div>
+        <div class="tpubs"><span class="tchip">🌍 Overture — places (POI)</span></div></div></div>
+    </div>
+  </div>
+  <p class="muted small" style="margin-top:12px">One site question can join a <b>municipal plan</b> (HSY), <b>national topography</b> (NLS), an <b>EU statistic</b> (Eurostat) and a <b>global POI layer</b> (Overture) — local to planetary, in a single query. The <code>bbox</code> on each registry child is how the agent picks the right tier before attaching.</p>
+</section>
+
+<!-- 5 PICK -->
+<section class="slide">
+  <div class="eyebrow">Step 3 — pick catalogs: pre-filter by bbox, then by relevance</div>
+  <h2><span class="step">③</span> Match each ask to the publisher that answers it</h2>
+  <table>
+    <tr><th>The ask</th><th>Publisher</th><th>Dataset</th></tr>
+    <tr><td><b>People nearby</b></td><td>Statistics Finland</td><td><code>vaestoruutu_1km</code>, <code>paavo_vaesto</code></td></tr>
+    <tr><td><b>Land use</b></td><td>Copernicus (EU)</td><td><code>urbanatlas</code></td></tr>
+    <tr><td><b>Environmental constraints</b></td><td>SYKE + NLS</td><td><code>flood_hazard</code>, <code>natura2000</code>, <code>groundwater</code>, <code>protected</code></td></tr>
+    <tr><td><b>Proximity to power</b></td><td>National Land Survey</td><td><code>power_lines</code></td></tr>
+  </table>
+  <p class="muted small" style="margin-top:16px">Point <b>(24.65, 60.20)</b> falls inside every Finnish catalog’s bbox → keep them. Non-relevant sources (Eurostat, Overture, Fingrid…) are skipped for this question — but one new link would add the next publisher.</p>
+</section>
+
+<!-- 6 ATTACH -->
+<section class="slide">
+  <div class="eyebrow">Step 4 — attach catalogs &amp; read each one’s STAC index</div>
+  <h2><span class="step">④</span> DuckDB attaches Iceberg anonymously — no portal, no login</h2>
+  <div class="split">
+    <pre><span class="k">INSTALL</span> iceberg; <span class="k">LOAD</span> iceberg; <span class="k">LOAD</span> spatial;
+<span class="k">ATTACH</span> <span class="s">'nls'</span> (<span class="k">TYPE</span> iceberg,
+  <span class="k">ENDPOINT</span> <span class="s">'…/national-land-survey'</span>,
+  <span class="k">AUTHORIZATION_TYPE</span> <span class="s">'none'</span>);
+
+<span class="k">SELECT</span> id, properties.semantics, assets.data.href
+<span class="k">FROM</span> nls.catalog.datasets;</pre>
+    <div class="card">
+      <h3>What the index returns (NLS)</h3>
+      <ul class="clean small">
+        <li><code>sahkolinja</code> → <i>“distance to electricity transmission lines”</i> · <code>v2.power_lines</code></li>
+        <li><code>luonnonsuojelualue</code> → <i>“distance to protected areas”</i> · <code>v2.protected</code></li>
+        <li><code>jarvi</code> → <i>“distance to inland water”</i> · <code>v2.water</code></li>
+        <li><code>korkeusmalli_2m</code> → <i>2 m laser DEM</i> · raquet raster <span class="muted">(+ query_hint)</span></li>
+      </ul>
+      <p class="muted small" style="margin-top:8px">Every dataset declares its meaning (OSI semantics), CRS and where its data lives.</p>
+    </div>
+  </div>
+</section>
+
+<!-- 7 SCHEMA -->
+<section class="slide">
+  <div class="eyebrow">Step 5 — understand each dataset (schema + semantics)</div>
+  <h2><span class="step">⑤</span> Read the schema so the query uses the right columns</h2>
+  <div class="split">
+    <pre><span class="k">DESCRIBE SELECT</span> * <span class="k">FROM</span> syke.v2.flood_hazard;
+<span class="c">-- id, tulvasuojtoistuvuus (return period, yr),
+--     area_m2, perimeter_m, geom_wkb (WKB, CRS84)</span>
+
+<span class="k">DESCRIBE SELECT</span> * <span class="k">FROM</span> statfi.v2.statfi_popgrid;
+<span class="c">-- grd_id, vaesto (population), ika_0_14 / 15_64 / 65_,
+--     kunta, geom_wkb (1 km cell)</span></pre>
+    <div class="card">
+      <h3>The agent now knows the vocabulary</h3>
+      <ul class="clean small">
+        <li><code>tulvasuojtoistuvuus</code> = flood <b>return period</b> in years</li>
+        <li><code>vaesto</code> = <b>inhabitants</b> per 1 km cell</li>
+        <li><code>pvalueluokka</code> = groundwater <b>protection class</b></li>
+        <li><code>class_2018</code> = Urban Atlas <b>land-use class</b></li>
+        <li><code>geom_wkb</code> = geometry, WGS84 → transform to <b>EPSG:3067</b> for metres</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- 8 COMPOSE -->
+<section class="slide">
+  <div class="eyebrow">Step 6 — compose the query (the agent writes its own SQL)</div>
+  <h2><span class="step">⑥</span> One query, four publishers — joined by location</h2>
+  <div class="split">
+    <pre><span class="k">WITH</span> pt <span class="k">AS</span> (<span class="k">SELECT</span> <span class="fn">ST_Transform</span>(
+   <span class="fn">ST_Point</span>(<span class="o">24.65,60.20</span>),<span class="s">'EPSG:4326'</span>,<span class="s">'EPSG:3067'</span>) g)
+<span class="k">SELECT</span>
+ <span class="fn">min</span>(<span class="fn">ST_Distance</span>(geom_3067, pt.g)) <span class="c">-- per layer</span>
+<span class="k">FROM</span> nls.v2.power_lines, pt;          <span class="c">-- ⚡ power</span>
+<span class="c">-- + nls.v2.protected, syke.v2.natura2000,
+--   syke.v2.groundwater, syke.v2.flood_hazard …</span></pre>
+    <div class="card">
+      <h3>Result — distances in metres</h3>
+      <table>
+        <tr><td>⚡ Power line</td><td class="v">1,104 m</td></tr>
+        <tr><td>Protected area</td><td class="v">1,545 m</td></tr>
+        <tr><td>Lake / water</td><td class="v">2,377 m</td></tr>
+        <tr><td>Groundwater area</td><td class="v">2,611 m</td></tr>
+        <tr><td>Natura 2000</td><td class="v">4,560 m</td></tr>
+        <tr><td>Flood zone (1/1000 yr)</td><td class="v">5,369 m</td></tr>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- 9 PEOPLE + LANDUSE -->
+<section class="slide">
+  <div class="eyebrow">Step 7 — people &amp; land use (containment + radius)</div>
+  <h2><span class="step">⑦</span> Geometry is just a column — point-in-polygon and radius sums</h2>
+  <div class="split">
+    <pre><span class="c">-- people in the 1 km cell on-site, and within radius</span>
+<span class="k">SELECT</span> vaesto <span class="k">FROM</span> statfi.v2.statfi_popgrid
+<span class="k">WHERE</span> <span class="fn">ST_Contains</span>(geom, <span class="fn">ST_Point</span>(<span class="o">24.65,60.20</span>));
+<span class="c">-- 800   (3 km → 41,768 · 5 km → 100,832)</span>
+
+<span class="c">-- land-use class on-site (Copernicus Urban Atlas)</span>
+<span class="k">SELECT</span> class_2018 <span class="k">FROM</span> cop.v2.urbanatlas
+<span class="k">WHERE</span> <span class="fn">ST_Contains</span>(geom, <span class="fn">ST_Point</span>(<span class="o">24.65,60.20</span>));
+<span class="c">-- "Discontinuous dense urban fabric (50–80%)"</span></pre>
+    <div class="card">
+      <h3>Within 1 km — land-use mix (ha)</h3>
+      <ul class="clean small">
+        <li>Forest — <b>97.4</b></li>
+        <li>Medium-density urban fabric — <b>44.8</b></li>
+        <li>Green urban areas — <b>40.6</b></li>
+        <li>Industrial / commercial / public — <b>25.7</b></li>
+        <li>Dense urban fabric — <b>23.4</b></li>
+      </ul>
+      <p class="muted small" style="margin-top:8px">Urban-edge site with existing industrial land adjacent.</p>
+    </div>
+  </div>
+</section>
+
+<!-- 10 ENRICH + GEOM -->
+<section class="slide">
+  <div class="eyebrow">Step 8 &amp; 9 — enrich the findings, then pull geometries for the map</div>
+  <h2><span class="step">⑧⑨</span> Names, classes, return periods → and <code>ST_AsGeoJSON</code> for the map</h2>
+  <div class="cols">
+    <div class="card"><h3>Enrichment (who / what / how severe)</h3>
+      <ul class="clean small">
+        <li>Nearest flood zone is a <b>1-in-1000-yr</b> zone — site sits <b>outside</b> it</li>
+        <li>Groundwater area <b>“Puolarmetsä”, class 1</b> (vital for water supply)</li>
+        <li>Natura 2000 <b>“Espoonlahti–Saunalahti” (SAC)</b></li>
+        <li>Postal area <b>02770 Espoon Keskus</b> — 11,382 people, median income €25,425</li>
+      </ul>
+    </div>
+    <div class="card"><h3>Geometry export</h3>
+      <pre><span class="k">SELECT</span> <span class="fn">ST_AsGeoJSON</span>(<span class="fn">ST_GeomFromWKB</span>(geom_wkb))
+<span class="k">FROM</span> nls.v2.power_lines
+<span class="k">WHERE</span> <span class="fn">ST_DWithin</span>(geom_3067, pt, <span class="o">3000</span>);
+<span class="c">-- 16 transmission segments within 3 km
+-- + nearest groundwater / protected / pop-cell</span></pre>
+    </div>
+  </div>
+</section>
+
+<!-- 11 SYNTHESIZE -->
+<section class="slide">
+  <div class="eyebrow">Step 10 — synthesize a self-contained, provenance-first artifact</div>
+  <h2><span class="step">⑩</span> Every figure ships with its publisher, dataset &amp; exact query</h2>
+  <div class="split">
+    <div>
+      <p class="lead">The agent builds a single HTML page: a plain-language verdict, a metrics panel where <b>each number is one click from the SQL that produced it</b>, and a MapLibre map of the queried features.</p>
+      <div style="margin-top:12px">
+        <span class="tag">verdict in plain language</span>
+        <span class="tag">metrics + provenance</span>
+        <span class="tag">live MapLibre map</span>
+        <span class="tag b">re-runnable queries</span>
+      </div>
+      <p class="muted small" style="margin-top:14px">Honest framing throughout — grid = <i>favorable proximity, subject to capacity &amp; permitting</i>; flood from SYKE’s mapped zones, never inferred from elevation.</p>
+    </div>
+    <pre class="term"><span class="prompt">▸</span> wrote <b>espoo-site-screening.html</b>
+<span class="out">  4 publishers · 20 map features · 15 metrics
+  → every metric: publisher + dataset + query
+  → "initial screening, not a permit decision"</span></pre>
+  </div>
+</section>
+
+<!-- 12 RESULT MAP -->
+<section class="slide">
+  <div class="eyebrow">The result — the artifact the user receives</div>
+  <h2>The cited answer, on a map <span class="muted">(live — espoo-site-screening.html)</span></h2>
+  <iframe src="espoo-site-screening.html" title="Espoo site screening"></iframe>
+  <p class="muted small" style="margin-top:8px">If the frame is blank, serve the folder: <code>python3 -m http.server 8765</code> → open <code>/portolan-walkthrough.html</code>.</p>
+</section>
+
+<!-- 13 BOTTOM LINE -->
+<section class="slide">
+  <div class="eyebrow">The bottom line — what the data said</div>
+  <h2>An urban-edge Espoo site: strong on access, two flags to watch</h2>
+  <div class="kpi">
+    <div class="card"><div class="n">~101k</div><div class="l">people within 5 km <span class="muted">(StatFi)</span></div></div>
+    <div class="card"><div class="n">1.1 km</div><div class="l">to high-voltage line <span class="muted">(NLS)</span></div></div>
+    <div class="card"><div class="n">0</div><div class="l">mapped flood at site <span class="muted">(SYKE)</span></div></div>
+    <div class="card"><div class="n">2.6 km</div><div class="l">to class-1 groundwater <span class="muted">(SYKE)</span></div></div>
+  </div>
+  <p class="lead" style="margin-top:22px">Favorable on <b>power proximity</b> and <b>flood</b>; the items to watch are the <b>class-1 groundwater area</b> and the <b>Natura 2000 SAC</b> — neither at the site, both relevant to water/cooling permitting. <span class="muted">An initial spatial screening, not a permitting decision.</span></p>
+  <p class="muted small" style="margin-top:8px">— end of <b>Act 1</b>: one question, four publishers, a cited answer. The next acts show what an SDI built this way can <i>also</i> do. —</p>
+</section>
+
+<!-- ACT 2a -->
+<section class="slide">
+  <div class="eyebrow">Act 2 — compose across the federation (the powerful part)</div>
+  <h2>A question <span class="lime">no single dataset</span> can answer</h2>
+  <div class="split">
+    <pre class="term"><span class="prompt">user ▸</span> Assume a <b>100 MW data centre</b>. What would it pay
+for <b>electricity</b> here per year, and how does that
+compare to <b>Germany</b>? And how many people live
+<b>within 2 km</b> of the site?</pre>
+    <div class="card">
+      <h3>What happens</h3>
+      <ul class="clean small">
+        <li>Joins an <b>EU statistics table</b> (Eurostat industrial price, FI vs DE — non-geospatial) …</li>
+        <li>… × load × hours <span class="muted">(100 MW × 8,760 h = 876 GWh/yr)</span> …</li>
+        <li>… with a <b>Finnish spatial grid</b> (Statistics Finland 1 km population, summed within 2 km)</li>
+        <li>Arithmetic <b>across tiers</b> — regional · national · EU — every step sourced</li>
+      </ul>
+    </div>
+  </div>
+  <p class="muted small" style="margin-top:14px">“It’s federating across tiers and doing the math — that’s the catalog-of-catalogs paying off.”</p>
+</section>
+
+<!-- ACT 2b -->
+<section class="slide">
+  <div class="eyebrow">Act 2 — the answer, every step sourced</div>
+  <h2>Electricity bill, FI vs DE — and people within 2 km</h2>
+  <div class="split">
+    <div class="card">
+      <h3>Annual electricity cost · 100 MW · 876 GWh/yr</h3>
+      <div style="margin-top:10px">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+          <span style="width:62px;font-weight:700">🇫🇮 FI</span>
+          <div style="flex:1;background:#04131a;border-radius:7px;overflow:hidden"><div style="width:35.7%;background:var(--lime);color:#06140a;font-weight:800;padding:7px 10px;border-radius:7px;white-space:nowrap">€74.1M / yr</div></div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <span style="width:62px;font-weight:700">🇩🇪 DE</span>
+          <div style="flex:1;background:#04131a;border-radius:7px;overflow:hidden"><div style="width:100%;background:var(--blue);color:#031020;font-weight:800;padding:7px 10px;border-radius:7px;white-space:nowrap">€207.5M / yr</div></div>
+        </div>
+      </div>
+      <p class="small" style="margin-top:12px">FI <b>€0.0846/kWh</b> vs DE <b>€0.2369/kWh</b> (Eurostat 2025-S2, incl. taxes) → siting in Finland saves <b class="lime">~€133M / yr</b>.</p>
+      <p class="muted small">Publisher: Eurostat · <code>electricity_prices</code></p>
+    </div>
+    <div class="card">
+      <h3>People within 2 km</h3>
+      <div class="big lime" style="margin:6px 0 4px">26,973</div>
+      <p class="muted small">Publisher: Statistics Finland · <code>vaestoruutu_1km</code></p>
+      <pre style="margin-top:12px"><span class="k">SELECT</span> sum(vaesto) <span class="k">FROM</span> statfi.v2.statfi_popgrid
+<span class="k">WHERE</span> <span class="fn">ST_DWithin</span>(
+  <span class="fn">ST_Centroid</span>(geom_3067), site_3067, <span class="o">2000</span>);</pre>
+    </div>
+  </div>
+</section>
+
+<!-- ACT 3 -->
+<section class="slide">
+  <div class="eyebrow">Act 3 — it fixes the data by pull request (data-as-code)</div>
+  <h2>The catalogs are <span class="lime">git repos</span> — improve one like code</h2>
+  <div class="split">
+    <div>
+      <pre class="term"><span class="prompt">user ▸</span> Did any catalog's metadata look thin, wrong, or
+inconsistent? Make a concrete improvement to its
+source and open a pull request. Show me the PR
+and whether its validation passed.</pre>
+      <div class="flow" style="margin-top:14px">
+        <span class="node">edit source</span><span class="arr">→</span>
+        <span class="node">regen STAC</span><span class="arr">→</span>
+        <span class="node">validate.py</span><span class="arr">→</span>
+        <span class="node on">open PR</span><span class="arr">→</span>
+        <span class="node on">CI ✓</span>
+      </div>
+      <div class="card" style="margin-top:14px;border-color:#1c5a36;background:#0c2b1a">
+        <h3 style="color:var(--lime)">✓ Real PR — opened &amp; CI passed</h3>
+        <p class="small" style="margin:2px 0"><b>PR #1</b> · <code>jatorre/portolan-fingrid-catalog</code><br>
+        <span class="muted">github.com/jatorre/portolan-fingrid-catalog/pull/1</span></p>
+        <p class="small lime" style="margin:6px 0 0">validate workflow → 25 checks, 0 problems ✅</p>
+      </div>
+    </div>
+    <div class="card">
+      <h3>The real defect the agent found</h3>
+      <ul class="clean small">
+        <li><b>Fingrid</b> · <code>electricity_consumption</code> <span class="muted">(+ Eurostat sibling)</span></li>
+        <li>A <b>non-spatial</b> table is tagged <code>bbox:[-180,-90,180,90]</code> — a whole-world extent</li>
+        <li>Contradicts the registry (<code>bbox:null</code>, <code>geospatial:false</code>) and makes a table with <b>no geometry falsely match every location</b> in bbox pre-filtering</li>
+        <li><b>Fix:</b> set <code>bbox: null</code> + guard <code>generate_stac.py</code> to emit null geometry</li>
+      </ul>
+      <p class="muted small" style="margin-top:6px">A fix to <i>data</i> went through the same review + CI as a code change — guarded by the catalog’s own validation gate. The contribution loop closes.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ACT 4 -->
+<section class="slide">
+  <div class="eyebrow">Act 4 — it reports <i>why</i> (opt-in intent telemetry)</div>
+  <h2>A signal a data portal never had: not which bytes, but <span class="lime">why</span></h2>
+  <div class="split">
+    <pre class="term"><span class="prompt">user ▸</span> File an <b>opt-in usage report</b> on the catalog you
+relied on most, describing what I was trying to do.
+Paraphrase it, include nothing confidential, and
+show me the issue.</pre>
+    <div class="card">
+      <h3>usage-report → National Land Survey (most-relied-on)</h3>
+      <ul class="clean small">
+        <li><b>dataset(s):</b> <code>power_lines</code>, <code>protected</code>, <code>water</code></li>
+        <li><b>intent (paraphrased):</b> screening a candidate data-centre site near Espoo — distance to transmission lines, protected areas, and water for cooling</li>
+        <li><b>use-case:</b> industrial site selection / infrastructure siting</li>
+        <li><b>access:</b> DuckDB Iceberg <code>ATTACH</code> (anonymous), EPSG:3067 distance queries</li>
+      </ul>
+      <p class="lime small" style="margin-top:8px">✓ Real issue filed → <span class="muted">github.com/jatorre/portolan-nls-catalog/issues/1</span></p>
+      <p class="muted small" style="margin-top:4px">Opt-in · paraphrased · public — the publisher learns the real use case and can prioritize its data.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ACT 5 -->
+<section class="slide">
+  <div class="eyebrow">Act 5 — same files, four ways</div>
+  <h2>One open artifact on EU object storage, read <span class="lime">four ways</span></h2>
+  <div class="cols">
+    <div class="card"><h3>① Human — a web page</h3>
+      <p class="small">The catalog’s own <code>index.html</code> explorer opens in any browser. <span class="lime">HTTP 200 ✓</span></p>
+      <pre class="small">…/repo/portolan-statfi-catalog/index.html</pre>
+    </div>
+    <div class="card"><h3>② Engine — one line of SQL</h3>
+      <pre class="small"><span class="k">ATTACH</span> <span class="s">'c'</span>(<span class="k">TYPE</span> iceberg, <span class="k">ENDPOINT</span> <span class="s">'…/portolan-statfi-catalog'</span>,
+  <span class="k">AUTHORIZATION_TYPE</span> <span class="s">'none'</span>);
+<span class="k">SELECT</span> count(*) <span class="k">FROM</span> c.v2.statfi_popgrid;  <span class="c">-- 1,188</span></pre>
+    </div>
+    <div class="card"><h3>③ Standards — STAC + OGC API</h3>
+      <p class="small"><code>…/catalog.json</code> (STAC) and <code>…/records/catalog.json</code> (OGC API - Records). <span class="lime">both 200 ✓</span></p>
+    </div>
+    <div class="card"><h3>④ Direct — download the files</h3>
+      <p class="small">The Parquet/Iceberg objects are just files on object storage — fetch them, or read with Snowflake, GDAL, anything. No server.</p>
+    </div>
+  </div>
+  <p class="muted small" style="margin-top:14px">“<code>ATTACH</code>, <code>iceberg_scan</code>, STAC/Records, direct download — and a human web page. One open artifact, no server, sovereign by where it’s hosted.”</p>
+</section>
+
+<!-- ARCHITECTURE -->
+<section class="slide">
+  <div class="eyebrow">The pieces — how it all fits together</div>
+  <h2>One open architecture, <span class="lime">no server in the middle</span></h2>
+  <style>
+    .arch{display:flex;flex-direction:column;gap:0;margin-top:10px;max-width:1000px;width:100%}
+    .layer{display:grid;grid-template-columns:130px 1fr;align-items:center;gap:14px}
+    .layer .tag2{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--mut);text-align:right;font-weight:700}
+    .box{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 16px}
+    .box b{font-size:16px} .box .sub{font-size:12.5px;color:var(--mut);margin-top:2px}
+    .box.brain{border-color:var(--lime)} .box.brain b{color:var(--lime)}
+    .box.store{border-color:#1c4a7a} .box.store b{color:var(--blue)}
+    .down{grid-column:2;justify-self:center;color:var(--mut);font-size:13px;padding:5px 0;display:flex;gap:8px;align-items:center}
+    .down .ar{font-size:16px;color:var(--lime)}
+    .chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}
+    .chip2{font-size:12px;background:#04131a;border:1px solid var(--line);border-radius:7px;padding:3px 9px;color:#bfe3ff}
+    .loop{grid-column:2;margin-top:12px;border:1px dashed var(--lime);border-radius:10px;padding:9px 13px;font-size:13px;color:#d7ffd0;background:#0c2b1a55}
+  </style>
+  <div class="arch">
+    <div class="layer"><div class="tag2">Intelligence</div>
+      <div class="box brain"><b>🤖 Agent — Claude Code + <code>/sdi</code> skill</b><div class="sub">discovers → reads metadata → composes its own SQL → synthesizes the artifact → contributes back</div></div></div>
+    <div class="layer"><div class="down"><span class="ar">↓</span> 1. read the registry &nbsp;·&nbsp; <span class="ar">↑</span> cited answer</div></div>
+    <div class="layer"><div class="tag2">Discovery</div>
+      <div class="box"><b>🧭 Meta-catalog — root <code>stac.json</code></b> <span class="muted small">(catalog of catalogs)</span><div class="sub">one <code>child</code> link per publisher, each with a description + bbox → pick the right catalog</div></div></div>
+    <div class="layer"><div class="down"><span class="ar">↓</span> 2. attach the chosen catalog(s)</div></div>
+    <div class="layer"><div class="tag2">Access</div>
+      <div class="box"><b>⚙️ Query engine — open-source or commercial</b><div class="sub">DuckDB · Spark · Trino · BigQuery · Snowflake · Databricks — <code>ATTACH … 'none'</code> · <code>iceberg_scan</code></div>
+        <div class="chips"><span class="chip2">STAC</span><span class="chip2">OGC API - Records</span><span class="chip2">index.html (human)</span><span class="chip2">direct download</span></div></div></div>
+    <div class="layer"><div class="down"><span class="ar">↓</span> 3. read the files in place — no copies</div></div>
+    <div class="layer"><div class="tag2">Storage · 🇪🇺 sovereign</div>
+      <div class="box store"><b>☁️ Object storage — any S3 bucket</b> <span class="muted small">(UpCloud · OVH · Hetzner · AWS · self-hosted)</span><div class="sub">static files only: Iceberg <code>v2/v3</code> tables · raquet rasters · GeoParquet · STAC + Records JSON</div></div></div>
+    <div class="layer"><div class="down"><span class="ar">↑</span> published by CI (<code>publish.yml</code>)</div></div>
+    <div class="layer"><div class="tag2">Source · governance</div>
+      <div class="box"><b>📦 Publisher git repos × 9 — metadata as code</b><div class="sub"><code>datasets/*.json</code> + <code>generate_stac.py</code> + <code>validate.py</code> CI gate — the repo <i>is</i> the catalog</div></div></div>
+    <div class="layer"><div class="loop">🔁 <b>Contribution loop</b> — the agent opens <b>pull requests</b> (Act 3) and <b>opt-in usage-reports</b> (Act 4) straight back to these repos. Data improves like code.</div></div>
+  </div>
+</section>
+
+<!-- ANY STORAGE, ANY ENGINE -->
+<section class="slide">
+  <div class="eyebrow">Polyglot by design — any storage, any engine</div>
+  <h2>It’s just files on S3 — <span class="lime">host anywhere, query with anything</span></h2>
+  <div class="card" style="margin-top:8px">
+    <h3>Storage — each publisher hosts where it chooses 🇪🇺</h3>
+    <div class="pubgrid" style="grid-template-columns:repeat(6,1fr);margin-top:8px">
+      <div class="pub use"><b>UpCloud 🇫🇮</b><span>📦 NLS · SYKE</span></div>
+      <div class="pub use"><b>OVH 🇫🇷</b><span>📦 Copernicus</span></div>
+      <div class="pub use"><b>Hetzner 🇩🇪</b><span>📦 Statistics FI</span></div>
+      <div class="pub use"><b>Self-hosted</b><span>📦 HSY (MinIO)</span></div>
+      <div class="pub"><b>AWS S3</b><span>📦 Overture</span></div>
+      <div class="pub"><b>Azure Blob</b><span>📦 …</span></div>
+    </div>
+  </div>
+  <div class="flow" style="justify-content:center;margin:14px 0">
+    <span class="node on">🧭 one meta-catalog links every bucket</span>
+    <span class="arr">↓</span>
+    <span class="muted small">read in place — no central server, no copies</span>
+  </div>
+  <div class="cols">
+    <div class="card"><h3>Open-source engines</h3>
+      <div class="chips"><span class="chip2">DuckDB</span><span class="chip2">Apache Spark</span><span class="chip2">Trino</span><span class="chip2">Polars</span><span class="chip2">GDAL / OGR</span></div></div>
+    <div class="card"><h3>Commercial engines</h3>
+      <div class="chips"><span class="chip2">BigQuery</span><span class="chip2">Snowflake</span><span class="chip2">Databricks</span><span class="chip2">Microsoft Fabric</span><span class="chip2">CARTO</span></div></div>
+  </div>
+  <p class="muted small" style="margin-top:12px">Sovereignty is a <b>per-publisher choice</b> — any S3-compatible store in any jurisdiction. Any Iceberg/Parquet-aware engine reads the same files. No lock-in, top to bottom.</p>
+</section>
+
+<!-- DATA TYPES -->
+<section class="slide">
+  <div class="eyebrow">Any cloud-native spatial format — the same pattern</div>
+  <h2>One pattern, <span class="lime">every kind of spatial data</span></h2>
+  <div class="kpi" style="grid-template-columns:repeat(2,1fr);gap:16px;margin-top:14px">
+    <div class="card"><b class="lime">📐 Vector</b> <span class="tag" style="float:right;margin:0">● live in this demo</span>
+      <div class="l" style="margin-top:8px">Points · lines · polygons. <b>GeoParquet</b> + <b>Apache Iceberg</b> tables (WKB geometry, bbox-pruned).</div></div>
+    <div class="card"><b class="lime">🛰️ Raster</b> <span class="tag" style="float:right;margin:0">● live in this demo</span>
+      <div class="l" style="margin-top:8px">Imagery · DEM · indices. <b>COG</b> (Cloud-Optimized GeoTIFF) + <b>raquet</b> (raster-in-Parquet, queried in SQL).</div></div>
+    <div class="card"><b class="lime">🟢 Point clouds</b>
+      <div class="l" style="margin-top:8px">LiDAR · 3D scans. <b>COPC</b> (Cloud-Optimized Point Cloud) + <b>PDAL</b> pipelines.</div></div>
+    <div class="card"><b class="lime">🚗 Mobility data</b>
+      <div class="l" style="margin-top:8px">Trajectories · flows · origin-destination. <b>GeoParquet + mobility</b> extensions, same columnar files.</div></div>
+  </div>
+  <p class="muted small" style="margin-top:14px">This demo ships <b>vector</b> (Iceberg) and <b>raster</b> (raquet); point clouds and mobility are the <i>same</i> files-on-storage pattern — nothing about the architecture changes.</p>
+</section>
+
+<!-- PROVEN TECH -->
+<section class="slide">
+  <div class="eyebrow">Nothing proprietary, nothing exotic</div>
+  <h2>Built entirely on <span class="lime">proven, widely-adopted technology</span></h2>
+  <div class="kpi" style="grid-template-columns:repeat(3,1fr);gap:14px;margin-top:14px">
+    <div class="card"><b class="lime">🧊 Apache Iceberg</b><div class="l" style="margin-top:6px">Open table format — backed by Snowflake, BigQuery, Databricks, AWS, Trino, Spark.</div></div>
+    <div class="card"><b class="lime">🗂️ Apache Parquet</b><div class="l" style="margin-top:6px">The columnar standard — read by virtually every data tool on earth.</div></div>
+    <div class="card"><b class="lime">🛰️ STAC</b><div class="l" style="margin-top:6px">The de-facto open standard for describing & discovering spatial assets.</div></div>
+    <div class="card"><b class="lime">🌐 GeoParquet · OGC API</b><div class="l" style="margin-top:6px">OGC standards for vector-on-Parquet and Records — interop by spec, not by glue.</div></div>
+    <div class="card"><b class="lime">🔧 Git</b><div class="l" style="margin-top:6px">Universal version control & collaboration — the contribution loop runs on it.</div></div>
+    <div class="card"><b class="lime">🪣 S3 API</b><div class="l" style="margin-top:6px">Object storage available from every cloud — and self-hostable (MinIO, Ceph).</div></div>
+  </div>
+  <p class="muted small" style="margin-top:14px">Every layer is a standard with a <b>huge ecosystem</b>. Portolan is <b>composition, not invention</b> — that’s why it’s durable and sovereign.</p>
+</section>
+
+<!-- WHY -->
+<section class="slide">
+  <div class="eyebrow">Why this matters — the Portolan idea</div>
+  <h2>SDIs as open, self-describing, <span class="lime">agent-usable</span> infrastructure</h2>
+  <div class="cols">
+    <ul class="clean">
+      <li><b>Sovereign</b> — open files on European object storage, queried by an open engine. No GIS server, no portal, no data copies.</li>
+      <li><b>Federated</b> — 9 independent publishers, joined by location. Adding one = a single new link in the registry.</li>
+      <li><b>Agent-ready</b> — catalogs describe themselves (STAC + OSI semantics + schema). The agent discovers; it isn’t pre-wired.</li>
+    </ul>
+    <ul class="clean">
+      <li><b>Provenant</b> — every number keeps its publisher and a re-runnable query. Nothing is a black box.</li>
+      <li><b>Composable</b> — most real questions need 2–3 publishers; geometry is just a column to join on.</li>
+      <li><b>Honest</b> — screening, not permitting; claims framed to what the data can actually support.</li>
+    </ul>
+  </div>
+  <p class="lead" style="margin-top:18px;color:var(--lime)">Registry → catalog → dataset → query → cited answer. The same five steps, at any scale.</p>
+</section>
+
+<!-- CARTO COMMERCIAL LAYER -->
+<section class="slide">
+  <div class="eyebrow">The open core — and what CARTO adds on top</div>
+  <h2>The foundation stays open. <span class="lime">CARTO commercializes the layer around it.</span></h2>
+  <p class="lead">Everything you saw is open files, open formats, open engine — anyone can run it. For organizations that need governance, monetization and enterprise integration, CARTO provides a commercial layer on the same foundation:</p>
+  <div class="kpi" style="grid-template-columns:repeat(3,1fr);gap:14px;margin-top:16px">
+    <div class="card"><b class="lime">🔒 Private datasets &amp; governance</b><div class="l" style="margin-top:6px">Access control, roles and audit over private catalogs — the open pattern, with authz.</div></div>
+    <div class="card"><b class="lime">📝 Self-registration</b><div class="l" style="margin-top:6px">A managed onboarding flow for publishers to register and maintain their own catalogs.</div></div>
+    <div class="card"><b class="lime">🖥️ User interfaces</b><div class="l" style="margin-top:6px">Builder, dashboards and catalog explorers over the same files — no code required.</div></div>
+    <div class="card"><b class="lime">💶 Dataset commercialization</b><div class="l" style="margin-top:6px">Licensing, entitlements and a data marketplace to monetize datasets.</div></div>
+    <div class="card"><b class="lime">🔌 Legacy-format exposure</b><div class="l" style="margin-top:6px">Serve the same data as ISO 19115/19139, ArcGIS Server / GeoServices, WMS/WFS — bridge existing GIS.</div></div>
+    <div class="card"><b class="lime">🌐 Full connected GIS platform</b><div class="l" style="margin-top:6px">Warehouse-native analytics, workflows and maps — an end-to-end platform on the open core.</div></div>
+  </div>
+  <p class="muted small" style="margin-top:14px">Open foundation, commercial convenience — no lock-in: the data stays in open formats on storage you control.</p>
+</section>
+
+<!-- TAKEAWAYS (closer) -->
+<section class="slide">
+  <div class="eyebrow">The four take-aways — land these</div>
+  <h2>What this changes about spatial data infrastructure</h2>
+  <div class="kpi" style="grid-template-columns:repeat(2,1fr);gap:18px;margin-top:18px">
+    <div class="card"><div class="n">AI-Ready</div><div class="l" style="font-size:15px;margin-top:8px">The agent did all of this <b>from one URL</b> — discovering, querying, composing, even contributing back.</div></div>
+    <div class="card"><div class="n">Interoperable</div><div class="l" style="font-size:15px;margin-top:8px">The same files read by <b>DuckDB and Snowflake</b>; described by <b>STAC + OGC API - Records</b>.</div></div>
+    <div class="card"><div class="n">Sovereign</div><div class="l" style="font-size:15px;margin-top:8px">EU object storage, open formats, open engine — <b>host anywhere</b>, no lock-in.</div></div>
+    <div class="card"><div class="n">Cost-effective</div><div class="l" style="font-size:15px;margin-top:8px">Static files scale to <b>any traffic with no servers</b> — the cost barely moves.</div></div>
+  </div>
+  <p class="lead" style="margin-top:20px;color:var(--lime)">Portolan — open, sovereign, agent-ready spatial data infrastructure.</p>
+</section>
+
+</div>
+
+<div class="bar" id="bar"></div>
+<div class="brand"><b>Portolan</b> · OGC Connect Helsinki</div>
+<div class="hint">← / → or Space to navigate · F fullscreen</div>
+<div class="hud"><b id="cur">1</b> / <span id="tot">14</span></div>
+
+<script>
+const slides=[...document.querySelectorAll('.slide')];
+let i=0; const tot=slides.length;
+document.getElementById('tot').textContent=tot;
+function show(n){
+  i=Math.max(0,Math.min(tot-1,n));
+  slides.forEach((s,k)=>s.classList.toggle('active',k===i));
+  document.getElementById('cur').textContent=i+1;
+  document.getElementById('bar').style.width=((i+1)/tot*100)+'%';
+}
+document.addEventListener('keydown',e=>{
+  if(e.key==='ArrowRight'||e.key===' '||e.key==='PageDown'){e.preventDefault();show(i+1);}
+  else if(e.key==='ArrowLeft'||e.key==='PageUp'){e.preventDefault();show(i-1);}
+  else if(e.key==='Home'){show(0);} else if(e.key==='End'){show(tot-1);}
+  else if(e.key==='f'||e.key==='F'){if(!document.fullscreenElement)document.documentElement.requestFullscreen();else document.exitFullscreen();}
+});
+let sx=null;
+addEventListener('touchstart',e=>sx=e.touches[0].clientX);
+addEventListener('touchend',e=>{if(sx===null)return;const dx=e.changedTouches[0].clientX-sx;if(Math.abs(dx)>50)show(i+(dx<0?1:-1));sx=null;});
+show(0);
+</script>
+</body></html>
