@@ -10,15 +10,28 @@
     "via": "github",
     "repo": "https://github.com/jatorre/carto-ogc-helsinki",
     "issues_url": "https://github.com/jatorre/carto-ogc-helsinki/issues",
-    "accepts": ["issue", "pull_request"],
+    "accepts": [
+      "issue",
+      "pull_request"
+    ],
     "scope": "Report a data or metadata error, or request a new dataset / publisher. For this demo every catalog routes here; in production each publisher declares its own repo, so feedback about a dataset reaches the publisher who owns it.",
     "note": "INTERIM / NOT SOVEREIGN — GitHub is US-hosted (Fastly CDN). This is a placeholder for the feedback loop. A sovereign channel (self-hosted Forgejo/GitLab on EU infra, or a contributions endpoint beside the catalog) is still to be designed."
   },
   "extent": {
     "spatial": {
       "bbox": [
-        [-180, -90, 180, 90],
-        [15.0537852, 58.6074565, 33.9935374, 70.2641566]
+        [
+          -180,
+          -90,
+          180,
+          90
+        ],
+        [
+          15.0537852,
+          58.6074565,
+          33.9935374,
+          70.2641566
+        ]
       ]
     }
   },
@@ -43,38 +56,56 @@
     {
       "rel": "child",
       "title": "🇫🇮 National Land Survey of Finland (Maanmittauslaitos)",
-      "href": "https://8et4c.upcloudobjects.com/carto-ogc-connect-helsinki/catalog/national-land-survey",
+      "href": "https://8et4c.upcloudobjects.com/carto-ogc-connect-helsinki/repo/portolan-nls-catalog",
       "type": "application/json",
       "portolan:alias": "nls",
-      "portolan:catalog_type": "iceberg",
+      "portolan:catalog_type": "iceberg-rest-static",
       "portolan:geospatial": true,
       "portolan:datasets": 5,
-      "bbox": [15.0537852, 58.6074565, 33.9935374, 70.2641566],
-      "description": "Authoritative topographic + elevation base data — the physical-infrastructure backbone: power lines, lakes, protected areas and buildings (national vectors), plus the 2 m laser elevation model (raquet raster, Helsinki-region clip)."
+      "bbox": [
+        15.0537852,
+        58.6074565,
+        33.9935374,
+        70.2641566
+      ],
+      "description": "Authoritative topographic + elevation base data — the physical-infrastructure backbone: power lines, lakes, protected areas and buildings (national vectors), plus the 2 m laser elevation model (raquet raster, Helsinki-region clip).",
+      "portolan:source_repo": "https://github.com/jatorre/portolan-nls-catalog"
     },
     {
       "rel": "child",
       "title": "🇪🇺 Copernicus (European Union)",
-      "href": "https://8et4c.upcloudobjects.com/carto-ogc-connect-helsinki/catalog/copernicus",
+      "href": "https://8et4c.upcloudobjects.com/carto-ogc-connect-helsinki/repo/portolan-copernicus-catalog",
       "type": "application/json",
       "portolan:alias": "cop",
-      "portolan:catalog_type": "iceberg",
+      "portolan:catalog_type": "iceberg-rest-static",
       "portolan:geospatial": true,
       "portolan:datasets": 2,
-      "bbox": [24.15, 60.08, 24.8, 60.4],
-      "description": "EU Earth observation + land monitoring: Sentinel-2 NDVI vegetation index, and Copernicus Urban Atlas 2018 land-use polygons for the Helsinki FUA (authoritative class per parcel). NDVI gives the index; Urban Atlas gives the class."
+      "bbox": [
+        24.15,
+        60.08,
+        24.8,
+        60.4
+      ],
+      "description": "EU Earth observation + land monitoring: Sentinel-2 NDVI vegetation index, and Copernicus Urban Atlas 2018 land-use polygons for the Helsinki FUA (authoritative class per parcel). NDVI gives the index; Urban Atlas gives the class.",
+      "portolan:source_repo": "https://github.com/jatorre/portolan-copernicus-catalog"
     },
     {
       "rel": "child",
       "title": "🇫🇮 Finnish Environment Institute (SYKE)",
-      "href": "https://8et4c.upcloudobjects.com/carto-ogc-connect-helsinki/catalog/finnish-environment-institute",
+      "href": "https://8et4c.upcloudobjects.com/carto-ogc-connect-helsinki/repo/portolan-syke-catalog",
       "type": "application/json",
       "portolan:alias": "syke",
-      "portolan:catalog_type": "iceberg",
+      "portolan:catalog_type": "iceberg-rest-static",
       "portolan:geospatial": true,
       "portolan:datasets": 3,
-      "bbox": [24.15, 60.08, 24.8, 60.4],
-      "description": "Authoritative environmental / regulatory layers: flood-hazard zones (inundation extent by return period), Natura 2000 (SAC+SPA), and classified groundwater areas (VHS2022). Clipped to the Helsinki-region AOI."
+      "bbox": [
+        24.15,
+        60.08,
+        24.8,
+        60.4
+      ],
+      "description": "Authoritative environmental / regulatory layers: flood-hazard zones (inundation extent by return period), Natura 2000 (SAC+SPA), and classified groundwater areas (VHS2022). Clipped to the Helsinki-region AOI.",
+      "portolan:source_repo": "https://github.com/jatorre/portolan-syke-catalog"
     },
     {
       "rel": "child",
@@ -86,68 +117,93 @@
       "portolan:source_repo": "https://github.com/jatorre/portolan-hsy-catalog",
       "portolan:geospatial": true,
       "portolan:datasets": 1,
-      "bbox": [24.15, 60.08, 24.8, 60.4],
+      "bbox": [
+        24.15,
+        60.08,
+        24.8,
+        60.4
+      ],
       "description": "Regional planning: SeutuRAMAVA per detailed-plan-block land-use category + unused building-rights reserve, aggregated from the municipal plans across Espoo / Vantaa / Kauniainen. This publisher is git-sourced (the repo IS the catalog): metadata in GitHub, published to the bucket as a static Iceberg REST catalog (v2 WKB + v3 native) with STAC + OGC API - Records views."
     },
     {
       "rel": "child",
       "title": "⚡ Fingrid (national TSO) — non-geospatial",
-      "href": "https://8et4c.upcloudobjects.com/carto-ogc-connect-helsinki/catalog/fingrid",
+      "href": "https://8et4c.upcloudobjects.com/carto-ogc-connect-helsinki/repo/portolan-fingrid-catalog",
       "type": "application/json",
       "portolan:alias": "fingrid",
-      "portolan:catalog_type": "iceberg",
+      "portolan:catalog_type": "iceberg-rest-static",
       "portolan:geospatial": false,
       "portolan:datasets": 1,
       "bbox": null,
-      "description": "The Finnish transmission system operator. National grid load, 15-min MW time-series (30-day snapshot). No geometry — a plain table, here to show the SDI federates open data, not just maps."
+      "description": "The Finnish transmission system operator. National grid load, 15-min MW time-series (30-day snapshot). No geometry — a plain table, here to show the SDI federates open data, not just maps.",
+      "portolan:source_repo": "https://github.com/jatorre/portolan-fingrid-catalog"
     },
     {
       "rel": "child",
       "title": "📊 Statistics Finland (Tilastokeskus)",
-      "href": "https://8et4c.upcloudobjects.com/carto-ogc-connect-helsinki/catalog/statistics-finland",
+      "href": "https://8et4c.upcloudobjects.com/carto-ogc-connect-helsinki/repo/portolan-statfi-catalog",
       "type": "application/json",
       "portolan:alias": "statfi",
-      "portolan:catalog_type": "iceberg",
+      "portolan:catalog_type": "iceberg-rest-static",
       "portolan:geospatial": true,
       "portolan:datasets": 2,
-      "bbox": [24.15, 60.08, 24.8, 60.4],
-      "description": "Official statistics: Paavo postal-area demographics 2025 (population, income, employment, age) and the 1 km population grid 2025 (inhabitants + age groups per cell). The residential context at a site."
+      "bbox": [
+        24.15,
+        60.08,
+        24.8,
+        60.4
+      ],
+      "description": "Official statistics: Paavo postal-area demographics 2025 (population, income, employment, age) and the 1 km population grid 2025 (inhabitants + age groups per cell). The residential context at a site.",
+      "portolan:source_repo": "https://github.com/jatorre/portolan-statfi-catalog"
     },
     {
       "rel": "child",
       "title": "🧭 Location Finland (Location Innovation Hub)",
-      "href": "https://8et4c.upcloudobjects.com/carto-ogc-connect-helsinki/catalog/location-finland",
+      "href": "https://8et4c.upcloudobjects.com/carto-ogc-connect-helsinki/repo/portolan-locationfinland-catalog",
       "type": "application/json",
       "portolan:alias": "lf",
-      "portolan:catalog_type": "iceberg",
+      "portolan:catalog_type": "iceberg-rest-static",
       "portolan:geospatial": true,
       "portolan:datasets": 2,
-      "bbox": [24.15, 60.08, 24.8, 60.4],
-      "description": "Finland's national location-data gateway: YKR settlement/urban-structure zones (urban→peripheral gradient) and mean annual air temperature (°C — a climate coverage as a raquet raster)."
+      "bbox": [
+        24.15,
+        60.08,
+        24.8,
+        60.4
+      ],
+      "description": "Finland's national location-data gateway: YKR settlement/urban-structure zones (urban→peripheral gradient) and mean annual air temperature (°C — a climate coverage as a raquet raster).",
+      "portolan:source_repo": "https://github.com/jatorre/portolan-locationfinland-catalog"
     },
     {
       "rel": "child",
       "title": "🇪🇺 Eurostat (EU statistical office) — non-geospatial",
-      "href": "https://8et4c.upcloudobjects.com/carto-ogc-connect-helsinki/catalog/eurostat",
+      "href": "https://8et4c.upcloudobjects.com/carto-ogc-connect-helsinki/repo/portolan-eurostat-catalog",
       "type": "application/json",
       "portolan:alias": "eurostat",
-      "portolan:catalog_type": "iceberg",
+      "portolan:catalog_type": "iceberg-rest-static",
       "portolan:geospatial": false,
       "portolan:datasets": 1,
       "bbox": null,
-      "description": "EU statistical office. Industrial electricity price (€/kWh, incl. taxes), Finland vs EU-27 and other countries. No geometry."
+      "description": "EU statistical office. Industrial electricity price (€/kWh, incl. taxes), Finland vs EU-27 and other countries. No geometry.",
+      "portolan:source_repo": "https://github.com/jatorre/portolan-eurostat-catalog"
     },
     {
       "rel": "child",
       "title": "🌍 Overture Maps (global)",
-      "href": "https://8et4c.upcloudobjects.com/carto-ogc-connect-helsinki/catalog/overture-maps",
+      "href": "https://8et4c.upcloudobjects.com/carto-ogc-connect-helsinki/repo/portolan-overture-catalog",
       "type": "application/json",
       "portolan:alias": "overture",
-      "portolan:catalog_type": "iceberg",
+      "portolan:catalog_type": "iceberg-rest-static",
       "portolan:geospatial": true,
       "portolan:datasets": 1,
-      "bbox": [-180, -90, 180, 90],
-      "description": "Planet-scale Overture places (points of interest). Overture already publishes cloud-native GeoParquet, so the dataset stays a remote GeoParquet on Overture's own public S3 and is queried in place — no copy, same pattern, at global scale. Its bbox is the whole world: it matches any location."
+      "bbox": [
+        -180,
+        -90,
+        180,
+        90
+      ],
+      "description": "Planet-scale Overture places (points of interest). Overture already publishes cloud-native GeoParquet, so the dataset stays a remote GeoParquet on Overture's own public S3 and is queried in place — no copy, same pattern, at global scale. Its bbox is the whole world: it matches any location.",
+      "portolan:source_repo": "https://github.com/jatorre/portolan-overture-catalog"
     }
   ]
 }
