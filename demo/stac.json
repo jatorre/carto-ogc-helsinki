@@ -205,5 +205,11 @@
       "description": "Planet-scale Overture places (points of interest). Overture already publishes cloud-native GeoParquet, so the dataset stays a remote GeoParquet on Overture's own public S3 and is queried in place — no copy, same pattern, at global scale. Its bbox is the whole world: it matches any location.",
       "portolan:source_repo": "https://github.com/jatorre/portolan-overture-catalog"
     }
-  ]
+  ],
+  "stac_extensions": [
+    "https://portolan-sdi.github.io/git-backed-catalog/v1.0.0/schema.json"
+  ],
+  "git:repository": "https://github.com/jatorre/carto-ogc-helsinki",
+  "git:ref": "main",
+  "git:provider": "github"
 }
