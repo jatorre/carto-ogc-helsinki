@@ -534,6 +534,62 @@ show me the issue.</pre>
   <p class="muted small" style="margin-top:14px">Open foundation, commercial convenience — no lock-in: the data stays in open formats on storage you control.</p>
 </section>
 
+<!-- COMPONENTS · OPEN vs COMMERCIAL -->
+<section class="slide">
+  <div class="eyebrow">What's open vs commercial — the components</div>
+  <h2>Portolan = the open spec + CLI. <span class="lime">CARTO for Publishers</span> = the platform that manages it.</h2>
+  <style>
+    .cmp{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:6px;align-items:stretch}
+    .cmp-zone{border-radius:14px;padding:14px 16px;border:1.5px solid;display:flex;flex-direction:column}
+    .cmp-zone.open{border-color:#3a6b1e;background:#0c2b1a40}
+    .cmp-zone.com{border-color:#1c4a7a;background:#0a254040}
+    .cmp-tag{font-size:11px;letter-spacing:.1em;text-transform:uppercase;font-weight:800;margin-bottom:10px;color:var(--lime)}
+    .cmp-tag.b{color:var(--blue)}
+    .cmp-box{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px 13px;margin-bottom:8px}
+    .cmp-box b{font-size:14.5px} .cmp-box span{display:block;font-size:12px;color:var(--mut);margin-top:2px}
+    .cmp-box.hl b{color:var(--lime)} .cmp-box.platb b{color:var(--blue)}
+    .cmp-sub{font-size:11.5px;color:var(--mut);text-align:center;margin:2px 0 8px}
+    .cmp-row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+    .cmp-inner{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+    .cmp-ibox{background:var(--code);border:1px solid var(--line);border-radius:8px;padding:8px 10px}
+    .cmp-ibox b{font-size:12.5px;color:#dcebf5} .cmp-ibox span{display:block;font-size:11px;color:var(--mut);margin-top:2px}
+    .cmp-foot{font-size:12px;color:#cfe0e8;margin-top:auto;border-top:1px dashed var(--line);padding-top:8px}
+    .cmp-bridge{margin-top:14px;text-align:center;font-size:14.5px;color:#eaf2f5;background:#0e2530;border:1px solid var(--line);border-radius:10px;padding:9px 14px}
+    .cmp-bridge b{color:var(--lime)}
+    .cmp-legend{margin-top:10px;text-align:center;font-size:12.5px;color:var(--mut)}
+    .cmp-sw{display:inline-block;width:12px;height:12px;border-radius:3px;vertical-align:middle;margin:0 5px 0 14px}
+    .cmp-sw.lime{background:var(--lime)} .cmp-sw.blue{background:var(--blue)}
+  </style>
+  <div class="cmp">
+    <div class="cmp-zone open">
+      <div class="cmp-tag">Open source · the Portolan project</div>
+      <div class="cmp-box hl"><b>📜 Portolan — a specification</b><span>STAC profile + git / Iceberg extensions: how a catalog is laid out. That's all Portolan is.</span></div>
+      <div class="cmp-box hl"><b>🛠️ portolan-cli — open-source tool</b><span><code>init · add · check · push</code> — convert, validate &amp; publish a catalog. No server.</span></div>
+      <div class="cmp-sub">↓ produces an open catalog — you host it</div>
+      <div class="cmp-row">
+        <div class="cmp-box"><b>🔧 Git</b><span>the catalog <i>definition</i> — source of truth, PR-able</span></div>
+        <div class="cmp-box"><b>☁️ Cloud storage</b><span>the published <i>catalog</i> — STAC + GeoParquet + Iceberg, static files</span></div>
+      </div>
+      <div class="cmp-foot">Scope: <b>public, open data</b> · open formats · host anywhere · anyone can run it · no lock-in.</div>
+    </div>
+    <div class="cmp-zone com">
+      <div class="cmp-tag b">Commercial · CARTO</div>
+      <div class="cmp-box platb"><b>🟦 CARTO platform — “CARTO for Publishers”</b>
+        <span>Manages a Portolan catalog <b>much more completely</b>:</span>
+        <div class="cmp-inner">
+          <div class="cmp-ibox"><b>Application</b><span>publish &amp; manage UI · Builder · Workflows · Agents (to consume)</span></div>
+          <div class="cmp-ibox"><b>Control plane</b><span>authoring · entitlements · usage analytics — AI-assisted</span></div>
+          <div class="cmp-ibox"><b>Auth service</b><span>credential broker — verifies identity → vends scoped storage creds</span></div>
+          <div class="cmp-ibox"><b>IdP</b><span>identity provider — Keycloak / Authentik / bring-your-own</span></div>
+        </div>
+      </div>
+      <div class="cmp-foot b">Adds: <b>private datasets</b> · registration &amp; governance · monetization · federation · legacy-format exposure (WMS/WFS, ISO).</div>
+    </div>
+  </div>
+  <div class="cmp-bridge">Same open catalog underneath — CARTO for Publishers <b>reads &amp; writes the very same Git + cloud-storage files</b>, built on the open spec. The data stays in open formats on storage you control: <b>no lock-in</b>.</div>
+  <div class="cmp-legend"><span class="cmp-sw lime"></span>open source (Portolan)<span class="cmp-sw blue"></span>commercial (CARTO for Publishers)</div>
+</section>
+
 <!-- TAKEAWAYS (closer) -->
 <section class="slide">
   <div class="eyebrow">The four take-aways — land these</div>
