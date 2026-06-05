@@ -426,44 +426,6 @@ show me the issue.</pre>
   <p class="muted small" style="margin-top:14px">“<code>ATTACH</code>, <code>iceberg_scan</code>, STAC/Records, direct download — and a human web page. One open artifact, no server, sovereign by where it’s hosted.”</p>
 </section>
 
-<!-- ARCHITECTURE -->
-<section class="slide">
-  <div class="eyebrow">The pieces — how it all fits together</div>
-  <h2>One open architecture, <span class="lime">no server in the middle</span></h2>
-  <style>
-    .arch{display:flex;flex-direction:column;gap:0;margin-top:10px;max-width:1000px;width:100%}
-    .layer{display:grid;grid-template-columns:130px 1fr;align-items:center;gap:14px}
-    .layer .tag2{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--mut);text-align:right;font-weight:700}
-    .box{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 16px}
-    .box b{font-size:16px} .box .sub{font-size:12.5px;color:var(--mut);margin-top:2px}
-    .box.brain{border-color:var(--lime)} .box.brain b{color:var(--lime)}
-    .box.store{border-color:#1c4a7a} .box.store b{color:var(--blue)}
-    .down{grid-column:2;justify-self:center;color:var(--mut);font-size:13px;padding:5px 0;display:flex;gap:8px;align-items:center}
-    .down .ar{font-size:16px;color:var(--lime)}
-    .chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}
-    .chip2{font-size:12px;background:#04131a;border:1px solid var(--line);border-radius:7px;padding:3px 9px;color:#bfe3ff}
-    .loop{grid-column:2;margin-top:12px;border:1px dashed var(--lime);border-radius:10px;padding:9px 13px;font-size:13px;color:#d7ffd0;background:#0c2b1a55}
-  </style>
-  <div class="arch">
-    <div class="layer"><div class="tag2">Intelligence</div>
-      <div class="box brain"><b>🤖 Agent — any AI model</b> <span class="muted small">(Claude · open-source · Mistral · Gemini …)</span><div class="sub">discovers → reads metadata → composes its own SQL → synthesizes the report → contributes back</div></div></div>
-    <div class="layer"><div class="down"><span class="ar">↓</span> 1. read the registry &nbsp;·&nbsp; <span class="ar">↑</span> cited answer</div></div>
-    <div class="layer"><div class="tag2">Discovery</div>
-      <div class="box"><b>🧭 A STAC catalog of every catalog in the world</b><div class="sub">the registry — one <code>child</code> per publisher (description + bbox); itself likely a <b>GeoParquet</b> or <b>Iceberg</b> table → pick the right catalog</div></div></div>
-    <div class="layer"><div class="down"><span class="ar">↓</span> 2. attach the chosen catalog(s)</div></div>
-    <div class="layer"><div class="tag2">Access</div>
-      <div class="box"><b>⚙️ Query engine — open-source or commercial</b><div class="sub">DuckDB · Spark · Trino · BigQuery · Snowflake · Databricks — <code>ATTACH … 'none'</code></div>
-        <div class="chips"><span class="chip2" style="border-color:var(--lime);color:var(--lime)">the key: Apache Iceberg</span><span class="chip2">iceberg_scan</span><span class="chip2">SQL spatial joins</span></div></div></div>
-    <div class="layer"><div class="down"><span class="ar">↓</span> 3. read the files in place — no copies</div></div>
-    <div class="layer"><div class="tag2">Storage · 🇪🇺 sovereign</div>
-      <div class="box store"><b>☁️ Object storage — any S3 bucket</b> <span class="muted small">(UpCloud · OVH · Hetzner · AWS · self-hosted)</span><div class="sub">static files only: Iceberg <code>v2/v3</code> tables · raquet rasters · GeoParquet · STAC + Records JSON</div></div></div>
-    <div class="layer"><div class="down"><span class="ar">↑</span> published by CI (<code>publish.yml</code>)</div></div>
-    <div class="layer"><div class="tag2">Source · governance</div>
-      <div class="box"><b>📦 Publisher git repos × 9 — metadata as code</b><div class="sub"><code>datasets/*.json</code> + <code>generate_stac.py</code> + <code>validate.py</code> CI gate — the repo <i>is</i> the catalog</div></div></div>
-    <div class="layer"><div class="loop">🔁 <b>Contribution loop</b> — the agent opens <b>pull requests</b> (Act 3) and <b>opt-in usage-reports</b> (Act 4) straight back to these repos. Data improves like code.</div></div>
-  </div>
-</section>
-
 <!-- ANY STORAGE, ANY ENGINE -->
 <section class="slide">
   <div class="eyebrow">Serverless · polyglot by design</div>
@@ -492,6 +454,34 @@ show me the issue.</pre>
       <div class="chips"><span class="chip2">BigQuery</span><span class="chip2">Snowflake</span><span class="chip2">Databricks</span><span class="chip2">Microsoft Fabric</span><span class="chip2">CARTO</span></div></div>
   </div>
   <p class="muted small" style="margin-top:12px">Sovereignty is a <b>per-publisher choice</b> — any S3-compatible store in any jurisdiction. Any Iceberg/Parquet-aware engine reads the same files. No lock-in, top to bottom.</p>
+</section>
+
+<!-- COST -->
+<section class="slide">
+  <div class="eyebrow">Serverless economics</div>
+  <h2>Cost that <span class="lime">doesn’t scale with popularity</span></h2>
+  <p class="lead" style="margin:-4px 0 10px">No server in the request path — so cost is dominated by <b>storage</b>, not by how many people hit the data. <span class="muted">Scenario: a 50&nbsp;GB open dataset goes viral — 5&nbsp;TB/month downloaded, 500 concurrent users.</span></p>
+  <div class="cols">
+    <div class="card" style="border-color:#7a3b34">
+      <h3 style="color:#ff9bb0">Traditional WFS / GIS servers</h3>
+      <ul class="clean">
+        <li>Fleet of ~10–20 instances + load balancer + spatial DB to absorb the concurrency</li>
+        <li>Egress billed per GB; continuous ops — patching, autoscaling, monitoring</li>
+        <li><b style="color:#ff9bb0">≈ €2,000–4,500 / month</b> — and it climbs with every spike</li>
+      </ul>
+    </div>
+    <div class="card" style="border-color:#1c5a36">
+      <h3 style="color:var(--lime)">Portolan — static on object storage</h3>
+      <ul class="clean">
+        <li>Storage: 50&nbsp;GB × ~€0.01/GB ≈ €0.50 / month</li>
+        <li>Object store absorbs any concurrency; egress free / near-free on modern stores</li>
+        <li><b class="lime">≈ €1–50 / month</b> — essentially flat as it grows</li>
+      </ul>
+    </div>
+  </div>
+  <p class="lead" style="margin-top:16px;color:var(--lime)">Server cost scales with concurrency; object-storage cost is dominated by storage — the more popular the data, the bigger the win, often 10–100×.</p>
+  <p class="small" style="margin-top:10px;color:#cfe0e8">And onboarding is often <b class="lime">zero-cost</b>: data already in cloud-native formats — <b>Cloud-Optimized GeoTIFF</b>, <b>GeoParquet</b> — that already sits behind a cloud-storage service is used <b>as-is</b>. The catalog points at the existing files in place; nothing is re-created or copied.</p>
+  <p class="muted small" style="margin-top:6px">Rough, illustrative order-of-magnitude figures.</p>
 </section>
 
 <!-- DATA TYPES -->
@@ -528,30 +518,11 @@ show me the issue.</pre>
   <p class="muted small" style="margin-top:14px">Every layer is a standard with a <b>huge ecosystem</b>. Portolan is <b>composition, not invention</b> — that’s why it’s durable and sovereign.</p>
 </section>
 
-<!-- WHY -->
-<section class="slide">
-  <div class="eyebrow">Why this matters — the Portolan idea</div>
-  <h2>SDIs as open, self-describing, <span class="lime">agent-usable</span> infrastructure</h2>
-  <div class="cols">
-    <ul class="clean">
-      <li><b>Sovereign</b> — open files on European object storage, queried by an open engine. No GIS server, no portal, no data copies.</li>
-      <li><b>Federated</b> — 9 independent publishers, joined by location. Adding one = a single new link in the registry.</li>
-      <li><b>Agent-ready</b> — catalogs describe themselves (STAC + OSI semantics + schema). The agent discovers; it isn’t pre-wired.</li>
-    </ul>
-    <ul class="clean">
-      <li><b>Provenant</b> — every number keeps its publisher and a re-runnable query. Nothing is a black box.</li>
-      <li><b>Composable</b> — most real questions need 2–3 publishers; geometry is just a column to join on.</li>
-      <li><b>Honest</b> — screening, not permitting; claims framed to what the data can actually support.</li>
-    </ul>
-  </div>
-  <p class="lead" style="margin-top:18px;color:var(--lime)">Registry → catalog → dataset → query → cited answer. The same five steps, at any scale.</p>
-</section>
-
 <!-- CARTO COMMERCIAL LAYER -->
 <section class="slide">
-  <div class="eyebrow">The open core — and what CARTO adds on top</div>
-  <h2>The foundation stays open. <span class="lime">CARTO commercializes the layer around it.</span></h2>
-  <p class="lead">Everything you saw is open files, open formats, open engine — anyone can run it. For organizations that need governance, monetization and enterprise integration, CARTO provides a commercial layer on the same foundation:</p>
+  <div class="eyebrow">Portolan (open spec) + CARTO for Publishers (commercial)</div>
+  <h2>The spec stays open — <span class="lime">CARTO for Publishers</span> is the commercial layer.</h2>
+  <p class="lead">Everything you saw is open files, open formats, open engine — anyone can run it. Portolan is the open specification + tools. For publishers that need governance, monetization and enterprise integration, <b>CARTO for Publishers</b> is the commercial product on the same open foundation:</p>
   <div class="kpi" style="grid-template-columns:repeat(3,1fr);gap:14px;margin-top:16px">
     <div class="card"><b class="lime">🔒 Private datasets &amp; governance</b><div class="l" style="margin-top:6px">Access control, roles and audit over private catalogs — the open pattern, with authz.</div></div>
     <div class="card"><b class="lime">📝 Self-registration</b><div class="l" style="margin-top:6px">A managed onboarding flow for publishers to register and maintain their own catalogs.</div></div>
